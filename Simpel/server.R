@@ -169,10 +169,10 @@ function(input, output) {
     ###############################Obtain the mouse ortholog of the human RNA target
     
     # Define the marts for mmusculus and hsapiens
-    martMM = useMart(biomart="ensembl",
-                     dataset="mmusculus_gene_ensembl")
-    martHS = useMart(biomart="ensembl",
-                     dataset="hsapiens_gene_ensembl")
+    martMM = useEnsembl(biomart="ensembl",
+                 dataset="mmusculus_gene_ensembl", version=105)
+    martHS = useEnsembl(biomart="ensembl",
+                 dataset="hsapiens_gene_ensembl", version=105)
     
     # Get the orthologous Ensembl gene for the provided human Ensembl ID
     ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
