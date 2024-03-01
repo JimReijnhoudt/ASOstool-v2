@@ -1,1 +1,3 @@
-
+Optie om polymorfisme uit te zetten: Een optie om de polymorfisme analyse uit te schakelen. !checkbox is er maar niet gekoppeld!
+Secundaire structuuranalyse (Alleen Linux): Voer secundaire structuuranalyse alleen uit, via een checkbox.
+Eindresultaat en download optie: Toon alleen het eindresultaat op het eindscherm en biedt de mogelijkheid om de bestanden te downloaden.
