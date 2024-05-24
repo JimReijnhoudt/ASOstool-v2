@@ -1,0 +1,12 @@
+#!/bin/bash
+# This line tells the system that this is a bash script
+
+echo "Establishing SSH tunnel..."
+open -a "Google Chrome" http://localhost:8888
+
+# Prompt the user for the SSH username
+read -p "Enter your username: " userInput
+echo "Note: You will see no text when typing your password"
+
+# Use the user input to replace "gebruiker" in the SSH command
+ssh -L 8888:localhost:8787 -4 "$userInput"@kgye0003l001.research.erasmusmc.nl
