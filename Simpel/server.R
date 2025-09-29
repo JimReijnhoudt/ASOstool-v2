@@ -1,3 +1,4 @@
+# Imports
 library(shinythemes)
 library(shiny)
 library(shinydashboard)
@@ -12,7 +13,10 @@ library(rlang)
 library(dplyr)
 library(DT)
 library(shinyBS)
-setwd("/home/gebruiker")
+
+# Set working dir
+working_dir = getwd()
+setwd(working_dir)
 print("work directory set")
 
 function(input, output) {
@@ -21,7 +25,9 @@ function(input, output) {
   observeEvent(input$run_button, {
     showNotification("Script started", type = "default", duration = NULL, # Notification stays until clicked away
                      closeButton = TRUE) # Include a close button)
+    
     #######################################################################functions
+    
     #Make the tox score function
     calculate_acute_neurotox <- function(xx) {
       ## make sure input is in character format
@@ -123,10 +129,10 @@ function(input, output) {
              }
       )
     }
-    ##############################################Store all human pre-mRNA sequences
-    path = "/mnt/data/Jeremy/txdb/"
-    # Load the TxDb object
-    txdb_hsa <- loadDb(paste0(path, "/txdb_hsa_biomart.db"))
+    
+    ##############################################Store all human pre-mRNA 
+    
+    txdb_hsa <- loadDb("../Data/txdb_hsa.db")
     
     print("milestone1")
     
