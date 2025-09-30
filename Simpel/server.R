@@ -12,7 +12,8 @@ library(rlang)
 library(dplyr)
 library(DT)
 library(shinyBS)
-setwd("/home/gebruiker")
+#setwd("/home/gebruiker")
+setwd("..")
 print("work directory set")
 
 function(input, output) {
@@ -124,9 +125,10 @@ function(input, output) {
       )
     }
     ##############################################Store all human pre-mRNA sequences
-    path = "/mnt/data/Jeremy/txdb/"
+    path = getwd()
+    getwd()
     # Load the TxDb object
-    txdb_hsa <- loadDb(paste0(path, "/txdb_hsa_biomart.db"))
+    txdb_hsa <- loadDb("txdb_hsa_biomart.db")
     
     print("milestone1")
     
@@ -481,7 +483,7 @@ function(input, output) {
     })
     
     # Get the current date
-    current_date <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+    current_date <- format(Sys.time(), "%Y-%m-%d %H-%M-%S")
     
     
     #collect the data, change the name for each gene tested
