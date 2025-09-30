@@ -12,7 +12,6 @@ if (!dir.exists(location)) {
 # Build the full destination path for the file.
 destination <- file.path(location, "Homo_sapiens.GRCh38.115.gtf.gz")
 
-# URL to the database
 url <- "https://ftp.ensembl.org/pub/current_gtf/homo_sapiens/Homo_sapiens.GRCh38.115.gtf.gz"
 
 # Download the file to the specified location.
