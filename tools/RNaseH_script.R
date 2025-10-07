@@ -51,7 +51,7 @@ joined_short <- joined_long %>%
 
 # Final calculation for each row of the average and the multiplied. 
 joined_short$average = rowMeans(joined_short[, !(names(joined_short) %in% c("window", "pairs"))])
-joined_short$multiply <- apply (joined_short[, !(names(joined_short) %in% c("window", "pairs"))], 1, prod)
+joined_short$multiply <- apply (joined_short[, !(names(joined_short) %in% c("window", "pairs", "average"))], 1, prod)
 
 # Adding the final two colomns from the joined_short to seq_df for a extra option of viewing. 
 seq_scored <- seq_df %>% 
