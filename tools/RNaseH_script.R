@@ -3,7 +3,7 @@ library(tidyr)
 library(dplyr)
 library(glue)
 
-# The standard score for the nucleotide positions for cleavage. 
+# The standard score matrix for the nucleotide positions for cleavage. 
 nucleotide_model <- read_excel("Files/nucleotide_model.xlsx")
 
 # Target sequence. 
@@ -14,7 +14,6 @@ window_size = 9
 
 # All windows of ASO sequence.
 starts  <- 1:(nchar(aso_seq) - window_size + 1)
-
 windows <- substring(aso_seq, starts, starts + (window_size - 1))
 
 # To get the dinucleotides from each of the windows.  
@@ -49,11 +48,11 @@ joined_short <- joined_long %>%
   pivot_wider(names_from = position, values_from = value) %>%
   arrange(window)
 
-# Final calculation for each row of the average and the multiplied. 
+# Final calculation for each row of the average and the multiplied score. 
 joined_short$average = rowMeans(joined_short[, !(names(joined_short) %in% c("window", "pairs"))])
 joined_short$multiply <- apply (joined_short[, !(names(joined_short) %in% c("window", "pairs", "average"))], 1, prod)
 
-# Adding the final two colomns from the joined_short to seq_df for a extra option of viewing. 
+# Adding the final two colomns from the joined_short to seq_df for a extra viewing option. 
 seq_scored <- seq_df %>% 
   left_join(joined_short %>% select (window, pairs, average, multiply), by = c("window", "pairs"))
 
@@ -61,5 +60,5 @@ seq_scored <- seq_df %>%
 joined_short <- joined_short[order(joined_short$average, decreasing = TRUE),]
 seq_scored <- seq_scored[order(seq_scored$average, decreasing = TRUE),]
 
-# Top result. 
+# Top 10 results. 
 top_results <- head(joined_short, 10)
