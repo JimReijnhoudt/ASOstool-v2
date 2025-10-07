@@ -62,3 +62,6 @@ seq_scored <- seq_scored[order(seq_scored$average, decreasing = TRUE),]
 
 # Top 10 results. 
 top_results <- head(joined_short, 10)
+
+# Simplified top 10 results. 
+simp_top_results <- subset(joined_short, select = c("window", "pairs", "average"))
