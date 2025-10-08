@@ -67,17 +67,24 @@ filter_data <- function(data, criterion) {
   )
   return(df)
 }
-# 
-# fetch_protein_expression <- function(protein_name) {
-#   base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
-#   columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
-#   full_url <-paste0(base_url, protein_name, columns)
-#   response <- GET(full_url)
-#   
-#   if (http_status(response) == 200) {
-#     df <- content(r)
-#   }
-# }
+
+fetch_protein_expression <- function(protein_name) {
+  base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
+  columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
+  full_url <- paste0(base_url, protein_name, columns)
+  response <- GET(full_url)
+
+  if (status_code(response) == 200) {
+    text_data2 <- content(response, "text", encoding = "UTF-8")
+    df <- read_tsv(text_data2)
+    return(df)
+  }
+  else {
+    print_statement3 <- paste("Failed to fetch data for protein", protein_name)
+    print(print_statement3)
+    return(NULL)
+  }
+}
 
 main <- function() {
   # Define the file name at the top
@@ -119,6 +126,8 @@ main <- function() {
     mismatches = integer(),
     stringsAsFactors = FALSE
   )
+  all_protein_df <- data.frame()
+    
   
   for (i in 1:nrow(urls_df)) { 
     mismatch_condition <- urls_df$mismatch_condition[i] 
@@ -140,8 +149,22 @@ main <- function() {
     else {
       print("Failed to fetch data.")
     }
+    
+    # extract protein names
+    protein_hits <- str_match(filtered_data_df$line, "NM_\\d+\\.\\d+\\|([^;]+)")[,2]
+    protein_hits <- unique(na.omit(protein_hits))
+    
+    for (protein_hit in protein_hits) {
+      print_statement2 <- paste("Fetching expression data for protein:", protein_hit)
+      print(print_statement2)
+      expression_data <- fetch_protein_expression(protein_hit)
+      all_protein_df <- rbind(all_protein_df, expression_data)
+      # if (!is.null(expression_data) && nrow(expression_data) > 0) {
+      #   
+      # }
+    }
   }
-  return(list(urls = urls_df, summary = summary_df, df = all_df))
+  return(list(urls = urls_df, summary = summary_df, df = all_df, prot_df = all_protein_df))
 }
   
 dataframes <- main()
@@ -149,3 +172,4 @@ dataframes <- main()
 urls <- dataframes$urls
 summary_df <- dataframes$summary
 df <- dataframes$df
+protein_expression <- dataframes$prot_df
