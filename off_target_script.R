@@ -86,7 +86,7 @@ fetch_protein_expression <- function(protein_name) {
 
 main <- function() {
   # Define the file name at the top
-  output_file_name <- "20250801_EH_UNC13A_SNP151&41_ASO146_R.xlsx"
+  output_file_name <- "20250801_EH_UNC13A_SNP151&41_ASO146.xlsx"
 
   # Define the ASO sequence
   aso_sequence <- "CACACCATGCACATTCAA"  # Replace with your actual sequence
@@ -197,10 +197,10 @@ main <- function() {
 
   colnames(summary_df) <- new_colnames
   
-  write.xlsx(summary_df, file = output_file_name, sheetName="Summary")
-  write.xlsx(spliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_s_")], append=TRUE)
-  write.xlsx(prespliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_p_")], append=TRUE)
-  write.xlsx(other_df, file = output_file_name, sheetName=sheetnames[!str_detect(sheetnames, "_(p|s)_")], append=TRUE)
+  write.xlsx(prespliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_p_")], row.names = FALSE)
+  write.xlsx(spliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_s_")], append=TRUE, row.names = FALSE)
+  write.xlsx(other_df, file = output_file_name, sheetName=sheetnames[!str_detect(sheetnames, "_(p|s)_")], append=TRUE, row.names = FALSE)
+  write.xlsx(summary_df, file = output_file_name, sheetName="Summary", append=TRUE, row.names = FALSE)
   
   return(list(urls = urls_df, summary = summary_df, df = all_df, spliced = spliced_df, prespliced = prespliced_df, other = other_df))
 }
