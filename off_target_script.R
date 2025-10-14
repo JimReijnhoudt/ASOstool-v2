@@ -41,6 +41,8 @@ filter_data <- function(data, criterion) {
   line_col <- character()
   equal_col <- integer()
   mismatch_col <- integer()
+  ins_col <- integer()
+  del_col <- integer()
   
   for (line in lines) {
     if (any(str_starts(line, start))) {
@@ -51,9 +53,15 @@ filter_data <- function(data, criterion) {
         equal_col <- c(equal_col, aantal_equal)
         
         parts <- strsplit(line, "\t")[[1]]
-        # mm <- as.integer(parts[13])
-        mm <- sum(as.integer(tail(parts, 2)))
+        mm <- as.integer(parts[13])
+        # mm <- sum(as.integer(tail(parts, 2)))
         mismatch_col <- c(mismatch_col, mm)
+        
+        del <- as.integer(parts[14])
+        ins <- as.integer(parts[15])
+        
+        del_col <- c(del_col, del)
+        ins_col <- c(ins_col, ins)
       }
     }
   }
@@ -62,6 +70,8 @@ filter_data <- function(data, criterion) {
     line = line_col,
     equal_signs = equal_col,
     mismatches = mismatch_col,
+    deletions = del_col, 
+    insertions = ins_col,
     stringsAsFactors = FALSE
   )
   return(df)
@@ -106,6 +116,8 @@ main <- function() {
     line = character(),
     equal_signs = integer(),
     mismatches = integer(),
+    deletions = integer(), 
+    insertions = integer(),
     stringsAsFactors = FALSE
   )
   
@@ -162,6 +174,8 @@ main <- function() {
         line = NULL,
         equal_signs = NULL,
         mismatches = NULL,
+        deletions = NULL, 
+        insertions = NULL,
         stringsAsFactors = FALSE
       )
     }
