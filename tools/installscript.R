@@ -16,7 +16,7 @@ install_if_missing <- function(package_name) {
 }
 
 # List of packages to check and install
-packages <- c("shinythemes", "shiny", "GenomicFeatures", "AnnotationDbi",
+packages <- c("shinythemes", "shiny", "shinydashboard", "GenomicFeatures", "AnnotationDbi",
               "BSgenome.Hsapiens.NCBI.GRCh38", "biomaRt", "Biostrings",
               "tidyverse", "cluster", "rlang", "dplyr", "DT", "shinyBS")
 
@@ -31,6 +31,7 @@ lapply(packages, install_if_missing)
 # Load the packages
 library(shinythemes)
 library(shiny)
+library(shinydashboard)
 library(GenomicFeatures)
 library(AnnotationDbi)
 library(BSgenome.Hsapiens.NCBI.GRCh38)
