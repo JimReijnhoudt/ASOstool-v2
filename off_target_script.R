@@ -4,7 +4,7 @@ library(httr)
 # library(stringr)
 library("xlsx")
 
-# Generate URLs for the calculated number of mismatches and all conditions
+# Generate URLs for the calculated number of mismatches and all condition
 generate_urls <- function(aso_sequence, mismatch_conditions) {
   base_url <- "https://gggenome.dbcls.jp/hg38"
   conditions <- c("_RefSeqCurated_prespliced_d3g2202/",
@@ -24,6 +24,7 @@ generate_urls <- function(aso_sequence, mismatch_conditions) {
     }
   }
   
+  # save url, mismatch and condition to a dataframe
   urls_df <- data.frame(
     mismatch_condition = mismatch_col, 
     condition = condition_col,
@@ -110,8 +111,10 @@ main <- function() {
   
   urls_df <- generate_urls(aso_sequence, mismatch_conditions)
   
+  # Initialize an empty data frame that will be filled with summary data
   summary_df <- data.frame()
   
+  # Initialize an empty data frame that will be filled with gggenome data
   all_df <- data.frame(
     line = character(),
     equal_signs = integer(),
@@ -121,8 +124,10 @@ main <- function() {
     stringsAsFactors = FALSE
   )
   
+  # Initialize an empty vector that will be filled with excel sheetnames
   sheetnames <- c()
   
+  # Loop over each URL and retrieve the data from it
   for (i in 1:nrow(urls_df)) {
     url <- urls_df$url[i]
     condition <- urls_df$condition[i]
@@ -140,10 +145,11 @@ main <- function() {
       next
     }
     
-
+    # Extract all unique protein names into a vector
     protein_hits <- str_match(filtered_data_df$line, "NM_\\d+\\.\\d+\\|([^;]+)")[,2]
     protein_hits <- unique(na.omit(protein_hits))
     
+    # Loop over all unique proteins and fill the summary_df data frame with the corresponding values
     for (protein_hit in protein_hits) {
       expression_data <- fetch_protein_expression(protein_hit)
       if (!is.null(expression_data) && nrow(expression_data) > 0) {
@@ -180,6 +186,7 @@ main <- function() {
       )
     }
     
+    # Generate sheetnames
     if (str_detect(str_to_lower(condition), "prespliced")) {
       cond_short <- "_RefSeqCurated_p_d3g2202/"
     } 
@@ -197,10 +204,12 @@ main <- function() {
     
   }
   
+  # Divide the data frame by condition
   spliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|spliced"), ]
   prespliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|prespliced"), ]
   other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
+  # Define new column names for the summary data frame
   new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches",
                     "Gene description", "Brain RNA - amygdala [nTPM]",
                     "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
@@ -212,6 +221,7 @@ main <- function() {
 
   colnames(summary_df) <- new_colnames
   
+  # Write each filtered data frame to separate sheets in the Excel output file:
   write.xlsx(prespliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_p_")], row.names = FALSE)
   write.xlsx(spliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_s_")], append=TRUE, row.names = FALSE)
   write.xlsx(other_df, file = output_file_name, sheetName=sheetnames[!str_detect(sheetnames, "_(p|s)_")], append=TRUE, row.names = FALSE)
