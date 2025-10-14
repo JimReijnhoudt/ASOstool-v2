@@ -259,21 +259,26 @@ if (chr_coord['strand'] == 1) {
 
 #keep unique names only and extract 
 #information base on chr_start from target.
-PMmax = PMs %>%
+PM_freq = PMs %>%
   mutate(name = map(chr_start, function(X){
     filter(target_annotation,
            chr_start <= X,
-           chr_end >= X)$name
+           chr_end >= X) %>%
+      select(name, chr_start_anno = chr_start)
   })) %>%
   unnest_legacy() %>%
-  arrange(desc(PM_freq)) %>%
-  filter(!duplicated(name))
-
+  rename(chr_start_PM = chr_start) %>%
+  group_by(name, chr_start_anno) %>%
+  summarise(
+    PM_tot_freq = 1 - prod(1 - PM_freq),
+    PM_max_freq = max(PM_freq),
+    PM_count= n()
+  )
 
 #combine data frames
 target_annotation = left_join(
-  target_annotation, PMmax,
-  by = c("name", "chr_start"))
+  target_annotation, PM_freq,
+  by = c("name" = "name", "chr_start" = "chr_start_anno"))
 
 
 ##################################Match RNA Target Regions to the Mouse Ortholog
@@ -329,7 +334,7 @@ target_region_select = filter(
   gene_hits_pm ==1,
   gene_hits_1mm <= 50,
   accessibility > 1E-6,
-  PM_freq > 0.05,
+  PM_max_freq > 0.05,
   conserved_in_mmusculus,
   tox_score >= 70
   )
