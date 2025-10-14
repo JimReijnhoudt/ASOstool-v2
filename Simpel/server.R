@@ -19,6 +19,7 @@ source("../tools/RNaseH_script.R")
 
 server <- function(input, output, session) {
   
+  # Reading in the csv data from a run to test the implementation of the RNaseH_script.R
   target_region_select <- read_excel("../Files/SRGAP2A_filtered.xls")
   nucleobase_select <- read_excel("../Files/SRGAP2A_filtered.xls")
   
@@ -32,9 +33,11 @@ server <- function(input, output, session) {
       formatStyle(names(nucleobase_select), color = "black")
   })
   
+  # A stored value for use in the second table. 
   selected_target <- reactiveVal(NULL)
   
   # This is the added code for the functionality of RNase H script.
+  # The first observer onclick calls the RNaseH_script and return the values in a table on the next tabpanel.
   observeEvent(input$results1_rows_selected, {
     row_number <- input$results1_rows_selected
     
@@ -67,6 +70,7 @@ server <- function(input, output, session) {
     }
   })
   
+  # The second oberserver gives a visual of the cleavage site on the target sequence. 
   observeEvent(input$rnaseh_results_rows_selected, {
     row_number <- input$rnaseh_results_rows_selected
     if (length(row_number) == 0) return()
