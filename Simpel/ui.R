@@ -142,7 +142,10 @@ sidebarLayout(
       "RNase H cleavage results",
       h3(textOutput("rnaseh_title")),
       div(uiOutput("rnaseh_info"), style = "margin-bottom: 15px;"),
-      dataTableOutput("rnaseh_results")
+      dataTableOutput("rnaseh_results"),
+      hr(),
+      h3("Visualised cleavage site:"),
+      uiOutput("cleavage_visual")
     ),
     
     tabPanel(
