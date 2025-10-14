@@ -84,11 +84,15 @@ server <- function(input, output, session) {
       target_seq <- row_data$name
       
       seq_visual <- paste0(
+        "5' ",
         substr(target_seq, 1, start_pos - 1),
         "<span style='background-color: lightblue; color: red; font-weight: bold;'>",
-        substr(target_seq, start_pos, end_pos),
+        substr(target_seq, start_pos, start_pos + 6),
+        "|",
+        substr(target_seq, start_pos + 7, end_pos),
         "</span>",
-        substr(target_seq, end_pos + 1, nchar(target_seq))
+        substr(target_seq, end_pos + 1, nchar(target_seq)),
+        " 3'"
       )
       
       output$cleavage_visual <- renderUI({
