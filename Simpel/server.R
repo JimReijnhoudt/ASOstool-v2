@@ -56,11 +56,7 @@ server <- function(input, output, session) {
     })
     
     output$rnaseh_results <- renderDataTable({
-      datatable(rnaseh_results(row_data$name), selection = 'single')
-    })
-    
-    output$cleavage_visual <- renderUI({
-      HTML(paste0("<div'></div>"))
+      datatable(rnaseh_results(row_data$name), selection = list(mode = 'single', selected = 1))
     })
     
     updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
