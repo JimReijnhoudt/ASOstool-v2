@@ -4,6 +4,7 @@ library(httr)
 # library(stringr)
 library("xlsx")
 
+# Generate URLs for the calculated number of mismatches and all conditions
 generate_urls <- function(aso_sequence, mismatch_conditions) {
   base_url <- "https://gggenome.dbcls.jp/hg38"
   conditions <- c("_RefSeqCurated_prespliced_d3g2202/",
@@ -32,7 +33,7 @@ generate_urls <- function(aso_sequence, mismatch_conditions) {
   return(urls_df)
 }
 
-
+# Function to filter data based on the number of equal signs
 filter_data <- function(data, criterion) {
   start <- c('NM_', 'chr', 'NR_')
   lines <- str_split(data, "\n")[[1]]
@@ -66,7 +67,7 @@ filter_data <- function(data, criterion) {
   return(df)
 }
 
-
+# Function to fetch protein expression data from Protein Atlas
 fetch_protein_expression <- function(protein_name) {
   base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
   columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
