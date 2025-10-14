@@ -313,22 +313,29 @@ function(input, output) {
     #keep unique names only and extract 
     #information base on chr_start from target.
     if (input$polymorphism_input == TRUE) {
-    PMmax = PMs %>%
-      mutate(name = map(chr_start, function(X){
+    
+    PM_freq = PMs %>%
+        mutate(name = map(chr_start, function(X){
         filter(target_annotation,
-               chr_start <= X,
-               chr_end >= X)$name
-      })) %>%
-      unnest_legacy() %>%
-      arrange(desc(PM_freq)) %>%
-      filter(!duplicated(name))
+                 chr_start <= X,
+                 chr_end >= X) %>%
+        select(name, chr_start_anno = chr_start)
+        })) %>%
+        unnest_legacy() %>%
+        rename(chr_start_PM = chr_start) %>%
+        group_by(name, chr_start_anno) %>%
+        summarise(
+          PM_tot_freq = 1 - prod(1 - PM_freq),
+          PM_max_freq = max(PM_freq),
+          PM_count= n()
+        )
     
     print("milestone13")
     
     #combine data frames
     target_annotation = left_join(
-      target_annotation, PMmax,
-      by = c("name", "chr_start"))
+      target_annotation, PM_freq,
+      by = c("name" = "name", "chr_start" = "chr_start_anno"))
     }
     
     print("milestone14")
@@ -387,9 +394,12 @@ function(input, output) {
     print("milestone18")
     
     #run the filtering
-     if (input$polymorphism_input == TRUE) {
+    if (input$polymorphism_input == TRUE) {
       target_regions <- target_regions %>%
-      mutate(PM_freq  = replace_na(PM_freq , 0.0))
+        mutate(across(
+          c(PM_freq, PM_max_freq, PM_tot_freq, PM_count),
+          ~ replace_na(., 0.0)
+        ))
     }
     
     print("temp milestone")
@@ -408,7 +418,7 @@ function(input, output) {
     }
     if (input$polymorphism_input == TRUE) {
      if (input$Poly_input == TRUE) {
-        target_region_select <- filter_function(target_region_select, input$numeric_input_d, "PM_freq", input$dropdown_input_d)
+        target_region_select <- filter_function(target_region_select, input$numeric_input_d, "PM_freq_max", input$dropdown_input_d)
       }
     }
     if (input$tox_input == TRUE) {
