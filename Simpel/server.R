@@ -13,7 +13,9 @@ library(dplyr)
 library(DT)
 library(shinyBS)
 #setwd("/home/gebruiker")
-setwd("..")
+# setwd("..")
+
+setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
 function(input, output) {
@@ -125,8 +127,10 @@ function(input, output) {
       )
     }
     ##############################################Store all human pre-mRNA sequences
-    path = getwd()
-    getwd()
+    # path = getwd()
+    # getwd()
+    
+    path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
     # Load the TxDb object
     txdb_hsa <- loadDb("txdb_hsa_biomart.db")
     
