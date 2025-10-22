@@ -264,6 +264,9 @@ function(input, output) {
     ###################count the number of pre-mRNA transcripts with a perfect match 
     
     #this part will take some time to run...
+    
+    print(target_annotation)
+    
     uni_tar = dplyr::select(target_annotation, name, length)%>%
       unique() %>%
       split(.,.$length)
