@@ -134,7 +134,5 @@ server <- function(input, output, session) {
       output$cleavage_visual <- renderUI({
         HTML(paste0("<div style='font-family: monospace; white-space: pre; font-size: 18px;'>", seq_visual, "</div>"))
       })
-      
-      
     })
 }
