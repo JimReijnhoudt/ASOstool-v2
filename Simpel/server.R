@@ -418,7 +418,7 @@ function(input, output) {
     }
     if (input$polymorphism_input == TRUE) {
      if (input$Poly_input == TRUE) {
-        target_region_select <- filter_function(target_region_select, input$numeric_input_d, "PM_freq_max", input$dropdown_input_d)
+        target_region_select <- filter_function(target_region_select, input$numeric_input_d, "PM_tot_freq", input$dropdown_input_d)
       }
     }
     if (input$tox_input == TRUE) {

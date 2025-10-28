@@ -46,7 +46,7 @@ calculate_acute_neurotox <- function(xx) {
 path = "/mnt/data/Jeremy/txdb/"
 
 # Load the TxDb object
-txdb_hsa <- loadDb(paste0(path, "txdb_hsa_biomart.db"))
+txdb_hsa <- loadDb(paste0("txdb_hsa_biomart.db"))
 
 # Extract the genes *
 gdb_hsa <- genes(txdb_hsa)
@@ -334,7 +334,7 @@ target_region_select = filter(
   gene_hits_pm ==1,
   gene_hits_1mm <= 50,
   accessibility > 1E-6,
-  PM_max_freq > 0.05,
+  PM_tot_freq < 0.05,
   conserved_in_mmusculus,
   tox_score >= 70
   )
