@@ -13,6 +13,7 @@ library(rlang)
 library(dplyr)
 library(DT)
 library(shinyBS)
+library(openxlsx)
 
 # Dont forget the source. 
 source("../tools/RNaseH_script.R")
@@ -33,16 +34,20 @@ server <- function(input, output, session) {
       formatStyle(names(nucleobase_select), color = "black")
   })
   
-  # A stored value for use in the second table. 
+  # A stored value for use in the second table and download. 
   selected_target <- reactiveVal(NULL)
+  rnaseh_stored <- reactiveVal(NULL)
   
   # This is the added code for the functionality of RNase H script.
-  # The first observer onclick calls the RNaseH_script and return the values in a table on the next tabpanel.
+  # The first function calls the RNaseH_script and return the values in a table on the next tabpanel.
   rnaseh_table_input <- function(row_number, data, table_id) {
     if (length(row_number) > 0) {
       
     row_data <- target_region_select[row_number, ]
     selected_target(row_data)
+    
+    rnaseh_data <- rnaseh_results(row_data$name)
+    rnaseh_stored(rnaseh_data)
     
     output$rnaseh_title <- renderText({
       paste0("RNase H results for: ", row_data$name)
@@ -54,7 +59,7 @@ server <- function(input, output, session) {
     })
     
     output$rnaseh_results <- renderDataTable({
-      datatable(rnaseh_results(row_data$name), selection = list(mode = 'single', selected = 1))
+      datatable(rnaseh_data, selection = list(mode = 'single', selected = 1))
     })
     
     updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
@@ -64,6 +69,31 @@ server <- function(input, output, session) {
     }
   }
   
+  # Download handler 
+  output$download_rnaseh <- downloadHandler(
+    filename = function() {
+      row_data <- selected_target()
+      if (is.null(row_data)){
+        "RNaseH_results.xlsx"
+      } else {
+        paste0("RNaseH_results_", row_data$name, ".xlsx")
+      }
+    },
+    content = function(file) {
+      data <- rnaseh_stored()
+      
+      if (is.null(data)) data <- data.frame(Message = "No avalable data")
+    
+      data[] <- lapply(data, as.character)
+      
+      wb <- createWorkbook()
+      addWorksheet(wb, "RNaseH_results")
+      writeData(wb, "RNaseH_results", data)
+      saveWorkbook(wb, file, overwrite = TRUE)
+    }
+  )
+  
+  # Table observers
   observeEvent(input$results1_rows_selected, {
     rnaseh_table_input(input$results1_rows_selected, target_region_select, "results1")
   })
@@ -72,7 +102,7 @@ server <- function(input, output, session) {
     rnaseh_table_input(input$results2_rows_selected, nucleobase_select, "results2")
   })
   
-  # The second oberserver gives a visual of the cleavage site on the target sequence. 
+  # The second observer object gives a visual of the cleavage site on the target sequence. 
   observeEvent(input$rnaseh_results_rows_selected, {
     row_number <- input$rnaseh_results_rows_selected
     if (length(row_number) == 0) return()
@@ -104,5 +134,7 @@ server <- function(input, output, session) {
       output$cleavage_visual <- renderUI({
         HTML(paste0("<div style='font-family: monospace; white-space: pre; font-size: 18px;'>", seq_visual, "</div>"))
       })
+      
+      
     })
 }
