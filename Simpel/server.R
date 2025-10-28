@@ -18,6 +18,8 @@ library(shinyBS)
 setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
+source("tools/offtarget.R")
+
 function(input, output) {
   showNotification("Finished loading", type = "default", duration = NULL, # Notification stays until clicked away
                    closeButton = TRUE) # Include a close button)
@@ -266,30 +268,52 @@ function(input, output) {
     #this part will take some time to run...
     
     print(target_annotation)
+    target_annotation <- target_annotation %>%
+      filter(!grepl("^C", name)) %>%
+      mutate(reverse_comp = reverse_complement(name))
+    # all_unique <- !any(duplicated(target_annotation$name))
+    # print(all_unique)
+    print(target_annotation)
     
-    uni_tar = dplyr::select(target_annotation, name, length)%>%
-      unique() %>%
-      split(.,.$length)
+    # target_annotation_unique <- unique(target_annotation)
+    # print(target_annotation_unique)
     
-    uni_tar = lapply(uni_tar, function(X){
-      dict0 = PDict(X$name, max.mismatch = 0)
-      dict1 = PDict(X$name, max.mismatch = 1)
-      
-      #perfect match count
-      pm = vwhichPDict(
-        pdict = dict0, subject = HS,
-        max.mismatch = 0, min.mismatch=0)
-      X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
-      
-      #single mismatch count, without indels
-      mm1 = vwhichPDict(
-        pdict = dict1, subject = HS,
-        max.mismatch = 1, min.mismatch=1)
-      X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-                                 (X))
-      X
-    }) %>%
-      bind_rows()
+    # target_annotation_unique <- target_annotation %>%
+    #   group_by(name) %>%
+    #   filter(n() == 1) %>%
+    #   ungroup()
+
+    uni_tar <- target_annotation %>%
+      mutate(results = map(reverse_comp, all)) %>%  # voer all() uit voor elke sequentie
+      mutate(
+        gene_hits_pm  = map_int(results, ~ sum(.x$`Total Mismatches` == 0, na.rm = TRUE)),
+        gene_hits_1mm = map_int(results, ~ sum(.x$`Total Mismatches` == 1, na.rm = TRUE))
+      ) %>%
+      select(name, length, gene_hits_pm, gene_hits_1mm)
+    
+    # uni_tar = dplyr::select(target_annotation, name, length)%>%
+    #   unique() %>%
+    #   split(.,.$length)
+    # 
+    # uni_tar = lapply(uni_tar, function(X){
+    #   dict0 = PDict(X$name, max.mismatch = 0)
+    #   dict1 = PDict(X$name, max.mismatch = 1)
+    #   
+    #   #perfect match count
+    #   pm = vwhichPDict(
+    #     pdict = dict0, subject = HS,
+    #     max.mismatch = 0, min.mismatch=0)
+    #   X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
+    #   
+    #   #single mismatch count, without indels
+    #   mm1 = vwhichPDict(
+    #     pdict = dict1, subject = HS,
+    #     max.mismatch = 1, min.mismatch=1)
+    #   X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
+    #                              (X))
+    #   X
+    # }) %>%
+    #   bind_rows()
     
     print("milestone11")
     
