@@ -38,12 +38,10 @@ server <- function(input, output, session) {
   
   # This is the added code for the functionality of RNase H script.
   # The first observer onclick calls the RNaseH_script and return the values in a table on the next tabpanel.
-  observeEvent(input$results1_rows_selected, {
-    row_number <- input$results1_rows_selected
-    
+  rnaseh_table_input <- function(row_number, data, table_id) {
     if (length(row_number) > 0) {
+      
     row_data <- target_region_select[row_number, ]
-    
     selected_target(row_data)
     
     output$rnaseh_title <- renderText({
@@ -64,6 +62,14 @@ server <- function(input, output, session) {
     proxy1 <- dataTableProxy("results1")
     selectRows(proxy1, NULL)
     }
+  }
+  
+  observeEvent(input$results1_rows_selected, {
+    rnaseh_table_input(input$results1_rows_selected, target_region_select, "results1")
+  })
+  
+  observeEvent(input$results2_rows_selected, {
+    rnaseh_table_input(input$results2_rows_selected, nucleobase_select, "results2")
   })
   
   # The second oberserver gives a visual of the cleavage site on the target sequence. 
