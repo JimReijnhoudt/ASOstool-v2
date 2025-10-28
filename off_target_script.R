@@ -5,28 +5,33 @@ library(httr)
 library("xlsx")
 
 # Generate URLs for the calculated number of mismatches and all condition
-generate_urls <- function(aso_sequence, mismatch_conditions) {
+generate_urls <- function(aso_sequence, mismatch_conditions, strands) {
   base_url <- "https://gggenome.dbcls.jp/hg38"
   conditions <- c("_RefSeqCurated_prespliced_d3g2202/",
                   "_RefSeqCurated_spliced_d3g2202/", ".p13_d3g2202/")
   
   mismatch_col <- character()
+  strand_col <- character()
   condition_col <- character()
   url_col <- character()
   
-  for (mc in mismatch_conditions) {
-    for (cond in conditions) {
-      url <- paste0(base_url, cond, mc, aso_sequence, ".txt")
-      
-      mismatch_col <- c(mismatch_col, mc)
-      condition_col <- c(condition_col, cond)
-      url_col <- c(url_col, url)
+  for (st in strands) {
+    for (mc in mismatch_conditions) {
+      for (cond in conditions) {
+        url <- paste0(base_url, cond, mc, st, aso_sequence, ".txt")
+        
+        mismatch_col <- c(mismatch_col, mc)
+        strand_col <- c(strand_col, st)
+        condition_col <- c(condition_col, cond)
+        url_col <- c(url_col, url)
+      }
     }
   }
   
   # save url, mismatch and condition to a dataframe
   urls_df <- data.frame(
     mismatch_condition = mismatch_col, 
+    strand = strand_col,
     condition = condition_col,
     url = url_col,
     stringsAsFactors = FALSE
@@ -98,7 +103,7 @@ fetch_protein_expression <- function(protein_name) {
 
 main <- function() {
   # Define the file name at the top
-  output_file_name <- "20250801_EH_UNC13A_SNP151&41_ASO146.xlsx"
+  # output_file_name <- "20250801_EH_UNC13A_SNP151&41_ASO146.xlsx"
 
   # Define the ASO sequence
   aso_sequence <- "CACACCATGCACATTCAA"  # Replace with your actual sequence
@@ -109,7 +114,9 @@ main <- function() {
   
   mismatch_conditions <- c("2/")
   
-  urls_df <- generate_urls(aso_sequence, mismatch_conditions)
+  strands <- c("+/")
+  
+  urls_df <- generate_urls(aso_sequence, mismatch_conditions, strands)
   
   # Initialize an empty data frame that will be filled with summary data
   summary_df <- data.frame()
@@ -221,11 +228,11 @@ main <- function() {
 
   colnames(summary_df) <- new_colnames
   
-  # Write each filtered data frame to separate sheets in the Excel output file:
-  write.xlsx(prespliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_p_")], row.names = FALSE)
-  write.xlsx(spliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_s_")], append=TRUE, row.names = FALSE)
-  write.xlsx(other_df, file = output_file_name, sheetName=sheetnames[!str_detect(sheetnames, "_(p|s)_")], append=TRUE, row.names = FALSE)
-  write.xlsx(summary_df, file = output_file_name, sheetName="Summary", append=TRUE, row.names = FALSE)
+  # # Write each filtered data frame to separate sheets in the Excel output file:
+  # write.xlsx(prespliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_p_")], row.names = FALSE)
+  # write.xlsx(spliced_df, file = output_file_name, sheetName=sheetnames[str_detect(sheetnames, "_s_")], append=TRUE, row.names = FALSE)
+  # write.xlsx(other_df, file = output_file_name, sheetName=sheetnames[!str_detect(sheetnames, "_(p|s)_")], append=TRUE, row.names = FALSE)
+  # write.xlsx(summary_df, file = output_file_name, sheetName="Summary", append=TRUE, row.names = FALSE)
   
   return(list(urls = urls_df, summary = summary_df, df = all_df, spliced = spliced_df, prespliced = prespliced_df, other = other_df))
 }

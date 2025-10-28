@@ -284,7 +284,7 @@ function(input, output) {
     #   ungroup()
 
     uni_tar <- target_annotation %>%
-      mutate(results = map(reverse_comp, all)) %>%  # voer all() uit voor elke sequentie
+      mutate(results = map(name, all)) %>%  # voer all() uit voor elke sequentie
       mutate(
         gene_hits_pm  = map_int(results, ~ sum(.x$`Total Mismatches` == 0, na.rm = TRUE)),
         gene_hits_1mm = map_int(results, ~ sum(.x$`Total Mismatches` == 1, na.rm = TRUE))
