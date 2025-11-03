@@ -101,7 +101,9 @@ fluidPage(
       
       tabPanel(
         "Off target results", 
-        "Placeholder text"
+        "Placeholder text", 
+        h3(textOutput("offtarget_title")),
+        DTOutput("offtarget_results")
       )
     ))
   )

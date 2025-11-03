@@ -267,13 +267,13 @@ function(input, output) {
     
     #this part will take some time to run...
     
-    print(target_annotation)
+    # print(target_annotation)
     target_annotation <- target_annotation %>%
       filter(!grepl("^C", name)) %>%
       mutate(reverse_comp = reverse_complement(name))
     # all_unique <- !any(duplicated(target_annotation$name))
     # print(all_unique)
-    print(target_annotation)
+    # print(target_annotation)
     
     # target_annotation_unique <- unique(target_annotation)
     # print(target_annotation_unique)
@@ -283,37 +283,28 @@ function(input, output) {
     #   filter(n() == 1) %>%
     #   ungroup()
 
-    uni_tar <- target_annotation %>%
-      mutate(results = map(name, all)) %>%  # voer all() uit voor elke sequentie
-      mutate(
-        gene_hits_pm  = map_int(results, ~ sum(.x$`Total Mismatches` == 0, na.rm = TRUE)),
-        gene_hits_1mm = map_int(results, ~ sum(.x$`Total Mismatches` == 1, na.rm = TRUE))
-      ) %>%
-      select(name, length, gene_hits_pm, gene_hits_1mm)
+    summary_server <- target_annotation %>%
+      head(2) %>%
+      mutate(results = map2(name, length, ~ {
+        res <- all(.x)          # voer de functie uit
+        res$name <- .x          # voeg de naam toe aan elke rij
+        res$length <- .y        # voeg de lengte toe
+        res                     # retourneer verrijkt resultaat
+      })) %>%
+      pull(results) %>%
+      bind_rows()
     
-    # uni_tar = dplyr::select(target_annotation, name, length)%>%
-    #   unique() %>%
-    #   split(.,.$length)
-    # 
-    # uni_tar = lapply(uni_tar, function(X){
-    #   dict0 = PDict(X$name, max.mismatch = 0)
-    #   dict1 = PDict(X$name, max.mismatch = 1)
-    #   
-    #   #perfect match count
-    #   pm = vwhichPDict(
-    #     pdict = dict0, subject = HS,
-    #     max.mismatch = 0, min.mismatch=0)
-    #   X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
-    #   
-    #   #single mismatch count, without indels
-    #   mm1 = vwhichPDict(
-    #     pdict = dict1, subject = HS,
-    #     max.mismatch = 1, min.mismatch=1)
-    #   X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-    #                              (X))
-    #   X
-    # }) %>%
-    #   bind_rows()
+    
+    print(summary_server)
+
+    uni_tar <- summary_server %>%
+      group_by(name, length) %>%
+      summarise(
+        gene_hits_pm  = sum(`Total Mismatches` == 0, na.rm = TRUE),
+        gene_hits_1mm = sum(`Total Mismatches` == 1, na.rm = TRUE),
+        .groups = "drop"
+      )
+
     
     print("milestone11")
     
@@ -503,9 +494,34 @@ function(input, output) {
     #output$results1 <- renderDataTable(target_region_select)
    # output$results2 <- renderDataTable(nucleobase_select)
     
+    # output$results1 <- renderDataTable({
+    #   datatable(target_region_select, rownames = FALSE) %>%
+    #     formatStyle(names(target_region_select), color = "black")
+    # })
+    
+    # faye versie
     output$results1 <- renderDataTable({
       datatable(target_region_select, rownames = FALSE) %>%
         formatStyle(names(target_region_select), color = "black")
+    })
+    observeEvent(input$results1_cell_clicked, {
+      seq <- input$results1_cell_clicked$value
+      if (!is.null(seq) && grepl("^[ACTG]+$", seq)) {
+        subset_df <- summary_server %>%
+          filter(name == seq) %>%
+          select(1:(ncol(.) - 2))
+        
+        output$offtarget_title <- renderText({
+          seq
+        })
+        
+        output$offtarget_results <- DT::renderDataTable({
+          datatable(
+            subset_df,
+            rownames = FALSE,
+          )
+        })
+        }
     })
     
     output$results2 <- renderDataTable({
