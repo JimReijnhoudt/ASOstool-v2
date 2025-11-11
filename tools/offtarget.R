@@ -2,10 +2,10 @@ library(tidyverse)
 library(httr)
 # library(readr)
 # library(stringr)
-library("xlsx")
+# library("xlsx")
 
 # Generate URLs for the calculated number of mismatches and all condition
-generate_urls <- function(aso_sequence, mismatch_conditions, strands) {
+generate_urls <- function(sequence, mismatch_conditions, strands) {
   base_url <- "https://gggenome.dbcls.jp/hg38"
   conditions <- c("_RefSeqCurated_prespliced_d3g2202/",
                   "_RefSeqCurated_spliced_d3g2202/", ".p13_d3g2202/")
@@ -18,7 +18,7 @@ generate_urls <- function(aso_sequence, mismatch_conditions, strands) {
   for (st in strands) {
     for (mc in mismatch_conditions) {
       for (cond in conditions) {
-        url <- paste0(base_url, cond, mc, st, aso_sequence, ".txt")
+        url <- paste0(base_url, cond, mc, st, sequence, ".txt")
         
         mismatch_col <- c(mismatch_col, mc)
         strand_col <- c(strand_col, st)
@@ -101,15 +101,15 @@ fetch_protein_expression <- function(protein_name) {
 }
 
 
-all <- function(aso_sequence) {
+all <- function(sequence) {
   # Calculate the number of mismatches based on the sequence length
-  sequence_length = nchar(aso_sequence)
+  sequence_length = nchar(sequence)
   mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
   
   mismatch_conditions <- c("2/")
   strands <- c("+/")
   
-  urls_df <- generate_urls(aso_sequence, mismatch_conditions, strands)
+  urls_df <- generate_urls(sequence, mismatch_conditions, strands)
   
   # Initialize an empty data frame that will be filled with summary data
   summary_df <- data.frame()

@@ -106,7 +106,7 @@ main <- function() {
   # output_file_name <- "20250801_EH_UNC13A_SNP151&41_ASO146.xlsx"
 
   # Define the ASO sequence
-  aso_sequence <- "CACACCATGCACATTCAA"  # Replace with your actual sequence
+  aso_sequence <- "TTTTTGCCATCCTGGGCGCT"  # Replace with your actual sequence
   
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(aso_sequence)
