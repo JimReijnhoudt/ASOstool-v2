@@ -258,31 +258,99 @@ function(input, output) {
     print("milestone10")
     
     ###################count the number of pre-mRNA transcripts with a perfect match 
+    # -------------------------
+    target_annotation <- target_annotation %>%
+      filter(!grepl("^C", name)) 
+    target_annotation <- head(target_annotation, 10)
+    print(target_annotation)
+    
+    # print(length(HS))
+    # print(head(names(HS)))
+    # -------------------------
     
     #this part will take some time to run...
     uni_tar = dplyr::select(target_annotation, name, length)%>%
       unique() %>%
       split(.,.$length)
+
+    # uni_tar = lapply(uni_tar, function(X){
+    #   dict0 = PDict(X$name, max.mismatch = 0)
+    #   dict1 = PDict(X$name, max.mismatch = 1)
+    #   
+    #   #perfect match count
+    #   pm = vwhichPDict(
+    #     pdict = dict0, subject = HS,
+    #     max.mismatch = 0, min.mismatch=0)
+    #   X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
+    #   
+    #   #single mismatch count, without indels
+    #   mm1 = vwhichPDict(
+    #     pdict = dict1, subject = HS,
+    #     max.mismatch = 1, min.mismatch=1)
+    #   X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
+    #                              (X))
+    #   X
+    # }) %>%
+    #   bind_rows()
     
-    uni_tar = lapply(uni_tar, function(X){
-      dict0 = PDict(X$name, max.mismatch = 0)
-      dict1 = PDict(X$name, max.mismatch = 1)
+    # ----------------------
+    offtarget_results_list <- list()
+    
+    uni_tar <- lapply(seq_along(uni_tar), function(k) {
+      X <- uni_tar[[k]]
       
-      #perfect match count
-      pm = vwhichPDict(
-        pdict = dict0, subject = HS,
-        max.mismatch = 0, min.mismatch=0)
-      X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
+      dict0 <- PDict(X$name, max.mismatch = 0)
+      dict1 <- PDict(X$name, max.mismatch = 1)
       
-      #single mismatch count, without indels
-      mm1 = vwhichPDict(
-        pdict = dict1, subject = HS,
-        max.mismatch = 1, min.mismatch=1)
-      X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-                                 (X))
-      X
-    }) %>%
-      bind_rows()
+      pm <- vwhichPDict(dict0, HS, max.mismatch = 0, min.mismatch = 0)
+      
+      print(class(pm))
+      print(pm[[1]])
+      print(lengths(pm))
+      
+      X$gene_hits_pm <- tabulate(unlist(pm), nbins = nrow(X))
+      
+      mm1 <- vwhichPDict(dict1, HS, max.mismatch = 1, min.mismatch = 1)
+      X$gene_hits_1mm <- tabulate(unlist(mm1), nbins = nrow(X))
+      
+      # ---- Nieuw stuk: sla per-hit info op ----
+      pm_df <- lapply(seq_along(pm), function(i) {
+        if (length(pm[[i]]) > 0) {
+          tibble(
+            query_seq = X$name[i],
+            ensembl_id = names(HS)[pm[[i]]],
+            mismatch = 0
+          )
+        } else NULL
+      }) %>% bind_rows()
+      
+      mm1_df <- lapply(seq_along(mm1), function(i) {
+        if (length(mm1[[i]]) > 0) {
+          tibble(
+            query_seq = X$name[i],
+            ensembl_id = names(HS)[mm1[[i]]],
+            mismatch = 1
+          )
+        } else NULL
+      }) %>% bind_rows()
+      
+      # Combineer 0- en 1-mismatch hits
+      offtarget_results_list[[k]] <- bind_rows(pm_df, mm1_df)
+      
+      return(X)
+    })
+    
+    # Combineer alles weer zoals origineel
+    uni_tar <- bind_rows(uni_tar)
+    
+    # Combineer alle off-target hits in één dataframe
+    offtarget_results <- bind_rows(offtarget_results_list) %>%
+      distinct()
+    
+    print(offtarget_results)
+    print(uni_tar)
+    # ----------------------
+    
     
     print("milestone11")
     
@@ -394,13 +462,26 @@ function(input, output) {
     print("milestone18")
     
     #run the filtering
+    # if (input$polymorphism_input == TRUE) {
+    #   target_regions <- target_regions %>%
+    #     mutate(across(
+    #       c(PM_freq, PM_max_freq, PM_tot_freq, PM_count),
+    #       ~ replace_na(., 0.0)
+    #     ))
+    # }
+    # ------------------------
+    glimpse(target_regions)
+    head(PM_freq)
+    
     if (input$polymorphism_input == TRUE) {
       target_regions <- target_regions %>%
+        ungroup() %>%
         mutate(across(
           c(PM_freq, PM_max_freq, PM_tot_freq, PM_count),
           ~ replace_na(., 0.0)
         ))
     }
+    # ------------------------
     
     print("temp milestone")
     target_region_select <- target_regions
