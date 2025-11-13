@@ -3,7 +3,7 @@ library(tidyr)
 library(glue)
 library(dplyr)
 
-rnaseh_results <- function(selected_row_name){
+rnaseh_results <- function(selected_row_name, mod_5prime, mod_3prime){
   # The standard score matrix for the nucleotide positions for cleavage. 
   nucleotide_model <- read_excel("../Files/nucleotide_model.xlsx")
   
@@ -12,10 +12,26 @@ rnaseh_results <- function(selected_row_name){
   
   # Window size.
   window_size = 9
+  cleavage_value = 7
+  
+  aso_len = nchar(aso_seq)
+  
+  # Check if windows are possible by size.
+  start_min  <- mod_5prime + 1
+  start_max <- aso_len - mod_3prime - window_size + 1
+  
+  if (start_min > start_max) {
+    stop("Modifications to 5' and 3' ends overlap to much for sequence length")
+  }
   
   # All windows of ASO sequence.
-  starts  <- 1:(nchar(aso_seq) - window_size + 1)
-  windows <- substring(aso_seq, starts, starts + (window_size - 1))
+  starts_pos <- 1:(aso_len - window_size + 1)
+  windows <- substring(aso_seq, starts_pos, starts_pos + (window_size - 1))
+  
+  # Remove all overlapping windows.
+  valid_windows <- which(starts_pos >= start_min & starts_pos <= start_max)
+  starts_pos <- starts_pos[valid_windows]
+  windows <- windows[valid_windows]
   
   # To get the dinucleotides from each of the windows.  
   get_pairs <- function(window) {
@@ -27,7 +43,7 @@ rnaseh_results <- function(selected_row_name){
   seq_df <- as.data.frame(seq_df, stringsAsFactors = FALSE)
   
   # Add pairs to dataframe.
-  seq_df <- seq_df %>% mutate(pairs = glue("{starts} - {starts + (window_size - 1)}"))
+  seq_df <- seq_df %>% mutate(pairs = glue("{starts_pos} - {starts_pos + (window_size - 1)}"))
   seq_df <- seq_df %>% relocate(pairs, .after = window)
   
   # To rename the columns for ease of use.

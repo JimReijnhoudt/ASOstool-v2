@@ -24,6 +24,7 @@ server <- function(input, output, session) {
   target_region_select <- read_excel("../Files/SRGAP2A_filtered.xls")
   nucleobase_select <- read_excel("../Files/SRGAP2A_filtered.xls")
   
+  # Render the tables.
   output$results1 <- renderDataTable({
     datatable(target_region_select, rownames = FALSE) %>%
       formatStyle(names(target_region_select), color = "black")
@@ -43,10 +44,14 @@ server <- function(input, output, session) {
   rnaseh_table_input <- function(row_number, data, table_id) {
     if (length(row_number) > 0) {
       
-    row_data <- target_region_select[row_number, ]
+    row_data <- data[row_number, ]
     selected_target(row_data)
     
-    rnaseh_data <- rnaseh_results(row_data$name)
+    rnaseh_data <- rnaseh_results(
+      selected_row_name = row_data$name,
+      mod_5prime = 0,
+      mod_3prime = 0
+    )
     rnaseh_stored(rnaseh_data)
     
     output$rnaseh_title <- renderText({
@@ -102,6 +107,23 @@ server <- function(input, output, session) {
     rnaseh_table_input(input$results2_rows_selected, nucleobase_select, "results2")
   })
   
+  # Apply end modifications. 
+  observeEvent(input$add_mods, {
+    row_data <- selected_target()
+    if (is.null(row_data)) return()
+      
+    rnaseh_data <- rnaseh_results(
+      selected_row_name = row_data$name,
+      mod_5prime = input$mod_5prime,
+      mod_3prime = input$mod_3prime
+    )
+    rnaseh_stored(rnaseh_data)
+    
+    output$rnaseh_results <- renderDataTable({
+      datatable(rnaseh_data, selection = list(mode = 'single', selected = 1))
+    })
+  })
+  
   # The second observer object gives a visual of the cleavage site on the target sequence. 
   observeEvent(input$rnaseh_results_rows_selected, {
     row_number <- input$rnaseh_results_rows_selected
@@ -110,7 +132,9 @@ server <- function(input, output, session) {
     row_data <- selected_target()
     if (is.null(row_data)) return()
     
-      rnaseh_data <- rnaseh_results(row_data$name)
+    rnaseh_data <- rnaseh_stored()
+    if (is.null(rnaseh_data)) return()
+      
       selected_row <- rnaseh_data[row_number, ]
       
       position_string <- str_split_1(selected_row$position, " - ")
@@ -118,17 +142,30 @@ server <- function(input, output, session) {
       end_pos <- as.numeric(position_string[2])
       
       target_seq <- row_data$name
+      mod5 <- input$mod_5prime
+      mod3 <- input$mod_3prime
+      aso_len <- nchar(target_seq)
+      
+      mod5_region <- substr(target_seq, 1, mod5)
+      mod3_region <- substr(target_seq, aso_len - mod3 + 1, aso_len)
+      
+      mid_region <- substr(target_seq, mod5 + 1, aso_len - mod3)
+      
+      cleavage_start <- start_pos
+      cleavage_end <- start_pos + 6 
       
       seq_visual <- paste0(
-        "5' ",
-        substr(target_seq, 1, start_pos - 1),
+        "<b style='color:darkorange;'>5'</b> ",
+        "<span style='font-weight:bold; color:#d95f02;'>", mod5_region, "</span>",
+        substr(target_seq, mod5 + 1, cleavage_start - 1),
         "<span style='background-color: lightblue; color: red; font-weight: bold;'>",
-        substr(target_seq, start_pos, start_pos + 6),
+        substr(target_seq, cleavage_start, cleavage_end),
         "|",
-        substr(target_seq, start_pos + 7, end_pos),
+        substr(target_seq, cleavage_end + 1, end_pos),
         "</span>",
-        substr(target_seq, end_pos + 1, nchar(target_seq)),
-        " 3'"
+        substr(target_seq, end_pos + 1, aso_len - mod3),
+        "<span style='font-weight:bold; color:#1b9e77;'>", mod3_region, "</span>",
+        " <b style='color:darkorange;'>3'</b>"
       )
       
       output$cleavage_visual <- renderUI({

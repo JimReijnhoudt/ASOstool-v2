@@ -142,9 +142,23 @@ sidebarLayout(
       "RNase H cleavage results",
       h3(textOutput("rnaseh_title")),
       div(uiOutput("rnaseh_info"), style = "margin-bottom: 15px;"),
+      hr(),
+      
+      fluidRow(
+        column(6, numericInput(
+          "mod_5prime", "Amount of modified nucleotides at the 5' end:", value = 0, min = 0, max = 10
+        )),
+        column(6, numericInput(
+          "mod_3prime", "Amount of modified nucleotides at the 3' end:", value = 0, min = 0, max = 10
+        )),
+        actionButton("add_mods", "Apply end modifications", class = "btn-primary", style = "margin-left: 15px;")
+      ),
+      hr(),
+      
       downloadButton("download_rnaseh", "Download results", style = "margin-bottom: 15px;"),
       dataTableOutput("rnaseh_results"),
       hr(),
+      
       h3("Visualised cleavage site:"),
       uiOutput("cleavage_visual")
     ),
