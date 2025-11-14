@@ -9,11 +9,7 @@ rnaseh_results <- function(selected_row_name, mod_5prime, mod_3prime){
   
   # Target sequence. 
   aso_seq = selected_row_name
-  
-  # Window size.
   window_size = 9
-  cleavage_value = 7
-  
   aso_len = nchar(aso_seq)
   
   # Check if windows are possible by size.
@@ -21,7 +17,12 @@ rnaseh_results <- function(selected_row_name, mod_5prime, mod_3prime){
   start_max <- aso_len - mod_3prime - window_size + 1
   
   if (start_min > start_max) {
-    stop("Modifications to 5' and 3' ends overlap to much for sequence length")
+    showNotification(
+      "Modifications to 5' and 3' ends overlap to much for sequence length.",
+      type = "error",
+      closeButton = TRUE
+    )
+    return(NULL)
   }
   
   # All windows of ASO sequence.

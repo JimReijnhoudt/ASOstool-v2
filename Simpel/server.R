@@ -74,31 +74,7 @@ server <- function(input, output, session) {
     }
   }
   
-  # Download handler 
-  output$download_rnaseh <- downloadHandler(
-    filename = function() {
-      row_data <- selected_target()
-      if (is.null(row_data)){
-        "RNaseH_results.xlsx"
-      } else {
-        paste0("RNaseH_results_", row_data$name, ".xlsx")
-      }
-    },
-    content = function(file) {
-      data <- rnaseh_stored()
-      
-      if (is.null(data)) data <- data.frame(Message = "No avalable data")
-    
-      data[] <- lapply(data, as.character)
-      
-      wb <- createWorkbook()
-      addWorksheet(wb, "RNaseH_results")
-      writeData(wb, "RNaseH_results", data)
-      saveWorkbook(wb, file, overwrite = TRUE)
-    }
-  )
-  
-  # Table observers
+  # Table observers. 
   observeEvent(input$results1_rows_selected, {
     rnaseh_table_input(input$results1_rows_selected, target_region_select, "results1")
   })
@@ -122,12 +98,14 @@ server <- function(input, output, session) {
     output$rnaseh_results <- renderDataTable({
       datatable(rnaseh_data, selection = list(mode = 'single', selected = 1))
     })
+    
+    output$cleavage_visual <- renderUI(div())
   })
   
   # The second observer object gives a visual of the cleavage site on the target sequence. 
   observeEvent(input$rnaseh_results_rows_selected, {
     row_number <- input$rnaseh_results_rows_selected
-    if (length(row_number) == 0) return()
+    if (length(row_number) == 0) return() 
     
     row_data <- selected_target()
     if (is.null(row_data)) return()
@@ -167,9 +145,33 @@ server <- function(input, output, session) {
         "<span style='font-weight:bold; color:#1b9e77;'>", mod3_region, "</span>",
         " <b style='color:darkorange;'>3'</b>"
       )
-      
+
       output$cleavage_visual <- renderUI({
         HTML(paste0("<div style='font-family: monospace; white-space: pre; font-size: 18px;'>", seq_visual, "</div>"))
       })
     })
+  
+  # Download handler. 
+  output$download_rnaseh <- downloadHandler(
+    filename = function() {
+      row_data <- selected_target()
+      if (is.null(row_data)){
+        "RNaseH_results.xlsx"
+      } else {
+        paste0("RNaseH_results_", row_data$name, ".xlsx")
+      }
+    },
+    content = function(file) {
+      data <- rnaseh_stored()
+      
+      if (is.null(data)) data <- data.frame(Message = "No avalable data")
+      
+      data[] <- lapply(data, as.character)
+      
+      wb <- createWorkbook()
+      addWorksheet(wb, "RNaseH_results")
+      writeData(wb, "RNaseH_results", data)
+      saveWorkbook(wb, file, overwrite = TRUE)
+    }
+  )
 }
