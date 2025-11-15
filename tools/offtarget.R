@@ -101,7 +101,7 @@ fetch_protein_expression <- function(protein_name) {
 }
 
 
-all <- function(sequence) {
+all_offt <- function(sequence) {
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(sequence)
   mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
@@ -205,15 +205,9 @@ all <- function(sequence) {
   return(summary_df)
 }
 
-reverse_complement <- function(seq) {
-  seq %>%
-    chartr("ATGC", "TACG", .) %>%
-    stringi::stri_reverse()               
-}
-
 
 # # ---------- Run ----------
-# dataframes <- all("CACACCATGCACATTCAA")
+# dataframes <- all_offt("CACACCATGCACATTCAA")
 # urls <- dataframes$urls
 # summary_df <- dataframes$summary
 # df <- dataframes$df

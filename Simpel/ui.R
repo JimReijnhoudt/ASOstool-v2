@@ -101,8 +101,9 @@ fluidPage(
       
       tabPanel(
         "Off target results", 
-        "Placeholder text", 
         h3(textOutput("offtarget_title")),
+        textOutput("aso_seq"),
+        textOutput("numb_offtargets"),
         DTOutput("offtarget_results")
       )
     ))

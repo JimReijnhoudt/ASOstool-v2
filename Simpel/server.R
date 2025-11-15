@@ -286,7 +286,7 @@ function(input, output) {
     summary_server <- target_annotation %>%
       head(2) %>%
       mutate(results = map2(name, length, ~ {
-        res <- all(.x)          # voer de functie uit
+        res <- all_offt(.x)          # voer de functie uit
         res$name <- .x          # voeg de naam toe aan elke rij
         res$length <- .y        # voeg de lengte toe
         res                     # retourneer verrijkt resultaat
@@ -506,22 +506,36 @@ function(input, output) {
     })
     observeEvent(input$results1_cell_clicked, {
       seq <- input$results1_cell_clicked$value
-      if (!is.null(seq) && grepl("^[ACTG]+$", seq)) {
-        subset_df <- summary_server %>%
-          filter(name == seq) %>%
-          select(1:(ncol(.) - 2))
-        
-        output$offtarget_title <- renderText({
-          seq
-        })
-        
-        output$offtarget_results <- DT::renderDataTable({
-          datatable(
-            subset_df,
-            rownames = FALSE,
-          )
-        })
-        }
+      
+      req(!is.null(seq))
+      req(grepl("^[ACGT]+$", seq, ignore.case = TRUE))
+      
+      aso_seq <- as.character(reverseComplement(DNAString(seq)))
+      
+      subset_df <- summary_server %>%
+        filter(name == seq) %>%
+        select(-name, -length)
+      
+      number_offtargets <- nrow(subset_df)
+      
+      output$offtarget_title <- renderText({
+        paste0("Off target results for: ", seq)
+      })
+      
+      output$aso_seq <- renderText({
+        paste0("ASO sequence: ", aso_seq)
+      })
+      
+      output$numb_offtargets <- renderText({
+        paste0("# off targets: ", number_offtargets)
+      })
+      
+      output$offtarget_results <- DT::renderDataTable({
+        datatable(
+          subset_df,
+          rownames = FALSE,
+        )
+      })
     })
     
     output$results2 <- renderDataTable({
