@@ -4,7 +4,11 @@
 
 ### 👥 Regular user setup (Shiny server only)
 
-This section is for end-users who only need to run the Shiny application. No RStudio or Git is required. \#### 1. Build the Docker image `docker build -t asostoolv2 .`
+This section is for end-users who only need to run the Shiny application. No RStudio or Git is required. 
+
+#### 1. Build the Docker image 
+
+```docker build -t asostoolv2 .```
 
 #### 2. Start the container
 
@@ -19,7 +23,30 @@ docker run -d \
 
 Open:
 
-👉 <http://localhost:3838/app/ASOstool-v2/Simpel/> You're done!
+👉 <http://localhost:3838/app/ASOstool-v2/Simpel/> 
+
+You're done!
+
+#### 4. Stop the container
+
+Stop the container after you're done to free up ports.
+List running containers:
+
+```
+docker ps
+```
+
+Stop it:
+
+```
+docker stop <container_id>
+```
+
+Remove it (optional):
+
+```
+docker rm <container_id>
+```
 
 ### 💻 Developer setup (RStudio + Git + SSH)
 
@@ -27,7 +54,9 @@ This section is for developers contributing to the project.
 
 #### 1. Create a persistent volume for RStudio home
 
-```docker volume create rstudio-home```
+```
+docker volume create rstudio-home
+```
 
 #### 2. Start the development container
 
@@ -95,7 +124,7 @@ git config --global user.email "you@example.com"
 
 These persist thanks to the rstudio-home volume.
 
-#### Fix Push/Pull — convert HTTPS to SSH
+#### 6. Fix Push/Pull — convert HTTPS to SSH
 
 If your remote url is set trough https you need to switch to SSH
 
@@ -127,3 +156,36 @@ Run once:
 git config core.autocrlf input
 ```
 
+#### 8. Stop the development container
+
+Stop the container after you're done to free up ports.
+List running containers:
+
+```
+docker ps
+```
+
+Stop it:
+
+```
+docker stop <container_id>
+```
+
+Remove it (optional):
+
+```
+docker rm <container_id>
+```
+
+### ✔ Setup Summary Table
+
+| Action                                                     | Required Once | Required Each Restart |
+| ----------------------------------------------------------- | ------------- | --------------------- |
+| Create `rstudio-home` volume                                | ✔             | ❌                     |
+| Generate SSH key                                            | ✔             | ❌                     |
+| Add SSH key to GitHub                                       | ✔             | ❌                     |
+| Set Git username/email                                      | ✔             | ❌                     |
+| Convert remote to SSH                                       | ✔             | ❌                     |
+| Start ssh-agent + ssh-add (If using password for SSH key)   | ❌             | ✔                     |
+| Run docker container                                        | ❌             | ✔                     |
+| Stop container                                              | ❌             | ✔                     |
