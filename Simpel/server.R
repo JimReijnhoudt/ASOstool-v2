@@ -128,7 +128,7 @@ function(input, output) {
     path = getwd()
     getwd()
     # Load the TxDb object
-    txdb_hsa <- loadDb("txdb_hsa_biomart.db")
+    txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
     print("milestone1")
     

@@ -68,10 +68,10 @@ RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org')" 
 
 # Make necesary directories
 ##############################################
-RUN mkdir -p /home/rstudio && \
+RUN mkdir -p /home/rstudio/ASOstool-v2 && \
     chown -R rstudio:rstudio /home/rstudio
 
-RUN mkdir -p /srv/shiny-server/app && \
+RUN mkdir -p /srv/shiny-server/ASOstool-v2 && \
     chown -R shiny:shiny /srv/shiny-server/
 
 RUN mkdir -p /home/rstudio/.ssh \
@@ -81,14 +81,20 @@ RUN mkdir -p /home/rstudio/.ssh \
 
 # Download and create txdb database
 ##############################################
+RUN mkdir -p /opt/ASOstool-v2
+
+
 RUN R -e "\
   library(txdbmaker); \
   gtf <- 'Homo_sapiens.GRCh38.112.gtf.gz'; \
-  download.file('https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/' %s% gtf, gtf); \
+  gtf_url <- paste0('https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/', gtf); \
+  download.file(gtf_url, gtf, mode = 'wb'); \
   txdb <- makeTxDbFromGFF(gtf); \
-  saveDb(txdb, '/srv/shiny-server/ASOstool-v2/txdb_hsa_biomart.db'); \
+  saveDb(txdb, '/opt/ASOstool-v2/txdb_hsa_biomart.db'); \
   unlink(gtf); \
 "
+
+
 
 # 5. Expose ports
 ##############################################
