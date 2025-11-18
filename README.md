@@ -15,7 +15,7 @@ This section is for end-users who only need to run the Shiny application. No RSt
 ```         
 docker run -d \
     -p 3838:3838 \
-    -v $(pwd):/srv/shiny-server/app/ASOstool-v2 \
+    -v $(pwd):/srv/shiny-server/ASOstool-v2 \
     asostoolv2
 ```
 
@@ -23,7 +23,7 @@ docker run -d \
 
 Open:
 
-👉 <http://localhost:3838/app/ASOstool-v2/Simpel/> 
+👉 <http://localhost:3838/ASOstool-v2/Simpel/> 
 
 You're done!
 
@@ -71,7 +71,7 @@ docker run -d \
   -p 8787:8787 \
   -p 3838:3838 \
   -v $(pwd):/home/rstudio/ASOstool-v2 \
-  -v $(pwd):/srv/shiny-server/app/ASOstool-v2 \
+  -v $(pwd):/srv/shiny-server/ASOstool-v2 \
   -v rstudio-home:/home/rstudio \
   asostoolv2
 ```

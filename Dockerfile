@@ -6,7 +6,7 @@ RUN /rocker_scripts/install_shiny_server.sh 1.5.23.1030
 
 
 # 1. System dependencies
-
+##############################################
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -32,11 +32,11 @@ RUN apt-get update && apt-get install -y \
 
 
 # Configure git for RStudio user
+##############################################
 RUN git config --system user.name "rstudio" && \
     git config --system user.email "rstudio@example.com"
 
-##############################################
-# 2. ViennaRNA 2.7.0 installation
+# ViennaRNA 2.7.0 installation
 ##############################################
 RUN wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_7_x/ViennaRNA-2.7.0.tar.gz && \
     tar xzf ViennaRNA-2.7.0.tar.gz && \
@@ -48,8 +48,8 @@ RUN wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_7_x/ViennaRNA-2.
     cd .. && \
     rm -rf ViennaRNA-2.7.0 ViennaRNA-2.7.0.tar.gz
 
-##############################################
-# 3. Install R packages (CRAN + Bioconductor)
+
+# Install R packages (CRAN + Bioconductor)
 ##############################################
 RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org')" \
  && R -e "BiocManager::install(c( \
@@ -65,32 +65,40 @@ RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org')" 
         'rlang', 'dplyr', 'DT', 'shinyBS', 'shinydashboard' \
      ), repos='https://cloud.r-project.org', dependencies=TRUE)"
 
-##############################################
-# 4. Make necesary directories
+
+# Make necesary directories
 ##############################################
 RUN mkdir -p /home/rstudio && \
     chown -R rstudio:rstudio /home/rstudio
 
-# Create shiny-server directory structure
 RUN mkdir -p /srv/shiny-server/app && \
-    chown -R shiny:shiny /srv/shiny-server/app
+    chown -R shiny:shiny /srv/shiny-server/
 
 RUN mkdir -p /home/rstudio/.ssh \
  && chown -R rstudio:rstudio /home/rstudio/.ssh \
  && chmod 700 /home/rstudio/.ssh
+ 
 
+# Download and create txdb database
 ##############################################
+RUN R -e "\
+  library(txdbmaker); \
+  gtf <- 'Homo_sapiens.GRCh38.112.gtf.gz'; \
+  download.file('https://ftp.ensembl.org/pub/release-112/gtf/homo_sapiens/' %s% gtf, gtf); \
+  txdb <- makeTxDbFromGFF(gtf); \
+  saveDb(txdb, '/srv/shiny-server/ASOstool-v2/txdb_hsa_biomart.db'); \
+  unlink(gtf); \
+"
+
 # 5. Expose ports
 ##############################################
 EXPOSE 3838 8787
 
-##############################################
 # 6. Default user credentials
 ##############################################
 ENV USER=rstudio
 ENV PASSWORD=rstudio
 
-##############################################
 # 7. Start RStudio Server
 ##############################################
 CMD ["/init"]
