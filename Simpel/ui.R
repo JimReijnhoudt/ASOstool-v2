@@ -104,6 +104,11 @@ fluidPage(
         h3(textOutput("offtarget_title")),
         textOutput("aso_seq"),
         textOutput("numb_offtargets"),
+        hr(),
+        selectInput("user_mismatch", "Select number of mismatches allowed", choices = list("0" = 0, "1" = 1, "2" = 2, "3" = 3)),
+        actionButton("apply_mismatch", "Apply"),
+        hr(),
+        downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
         DTOutput("offtarget_results")
       )
     ))

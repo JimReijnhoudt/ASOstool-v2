@@ -104,9 +104,6 @@ fetch_protein_expression <- function(protein_name) {
 all_offt <- function(sequence, mismatches_allowed) {
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(sequence)
-  # mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
-  
-  # mismatch_conditions <- c("2/")
   mismatch_conditions <- paste0(mismatches_allowed, "/")
   
   strands <- c("+/")
