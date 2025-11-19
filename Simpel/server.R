@@ -397,7 +397,7 @@ function(input, output) {
     if (input$polymorphism_input == TRUE) {
       target_regions <- target_regions %>%
         mutate(across(
-          c(PM_freq, PM_max_freq, PM_tot_freq, PM_count),
+          c(PM_max_freq, PM_tot_freq, PM_count),
           ~ replace_na(., 0.0)
         ))
     }
