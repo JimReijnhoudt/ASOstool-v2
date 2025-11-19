@@ -13,7 +13,13 @@ rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime)
   rna_len = nchar(rna_seq)
   
   # Check if windows are possible by size.
-  start_min  <- mod_5prime + 1
+  tmp <- mod_5prime
+  mod_5prime <- mod_3prime
+  mod_3prime <- tmp
+  
+  # Overlap on the 5' end of the rna sequence. 
+  overlap_5prime <- 4
+  start_min  <- max(1, mod_5prime + 1 - overlap_5prime)
   start_max <- rna_len - mod_3prime - window_size + 1
   
   if (start_min > start_max) {
@@ -26,7 +32,7 @@ rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime)
   }
   
   # All windows of rna sequence.
-  starts_pos <- 1:(rna_len - window_size + 1)
+  starts_pos <- start_min:start_max
   windows <- substring(rna_seq, starts_pos, starts_pos + (window_size - 1))
   
   # Remove all overlapping windows.

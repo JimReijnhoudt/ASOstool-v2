@@ -189,9 +189,11 @@ server <- function(input, output, session) {
 
       output$cleavage_visual <- renderUI({
         HTML(paste0(
+          "<h5>Oligo sequence: </h5>",
           "<div style='font-family: monospace; white-space: pre; font-size: 18px;'>", 
           oligo_visual_fw, 
           "</div>",
+          "<h5>RNA sequence: </h5>",
           "<div style='font-family: monospace; white-space: pre; font-size: 18px;'>", 
           rna_visual_rv, 
           "</div>"
