@@ -12,11 +12,22 @@ This section is for end-users who only need to run the Shiny application. No RSt
 
 #### 2. Start the container
 
+
+On Linux/Mac:
 ```         
 docker run -d \
     -p 3838:3838 \
     -v $(pwd):/srv/shiny-server/ASOstool-v2 \
     asostoolv2
+```
+
+On Windows (Powershell):
+```
+docker run -d `
+  -p 3838:3838 `
+  -v ${PWD}:/home/rstudio/ASOstool-v2 `
+  -v ${PWD}:/srv/shiny-server/ASOstool-v2 `
+  asostoolv2
 ```
 
 #### 3. Open the Shiny App
@@ -66,6 +77,7 @@ Mount:
 -   Project folder → Shiny
 -   Persistent RStudio home folder
 
+On Linux/Mac:
 ```         
 docker run -d \
   -p 8787:8787 \
@@ -73,6 +85,16 @@ docker run -d \
   -v $(pwd):/home/rstudio/ASOstool-v2 \
   -v $(pwd):/srv/shiny-server/ASOstool-v2 \
   -v rstudio-home:/home/rstudio \
+  asostoolv2
+```
+
+On Windows (Powershell):
+```
+docker run -d `
+  -p 8787:8787 `
+  -p 3838:3838 `
+  -v ${PWD}:/home/rstudio/ASOstool-v2 `
+  -v ${PWD}:/srv/shiny-server/ASOstool-v2 `
   asostoolv2
 ```
 
