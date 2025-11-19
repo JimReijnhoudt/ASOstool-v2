@@ -189,3 +189,52 @@ docker rm <container_id>
 | Start ssh-agent + ssh-add (If using password for SSH key)   | ❌             | ✔                     |
 | Run docker container                                        | ❌             | ✔                     |
 | Stop container                                              | ❌             | ✔                     |
+
+### 📦 Dependencies
+
+### Base Image
+| Component          | Version | Source     |
+| ------------------ | ------- | ---------- |
+| `rocker/tidyverse` | 4.5.1   | Docker Hub |
+
+### Shiny Server
+| Component    | Version     | Source                                                  |
+| ------------ | ----------- | ------------------------------------------------------- |
+| Shiny Server | 1.5.23.1030 | Installed via `/rocker_scripts/install_shiny_server.sh` |
+
+### Manually Installed Software
+| Component | Version | Source                           |
+| --------- | ------- | -------------------------------- |
+| ViennaRNA | 2.7.0   | Downloaded and built from source |
+
+### R Packages CRAN
+| Package        | Version | Source |
+| -------------- | ------- | ------ |
+| shiny          | latest  | CRAN   |
+| shinythemes    | latest  | CRAN   |
+| tidyverse      | latest  | CRAN   |
+| rlang          | latest  | CRAN   |
+| dplyr          | latest  | CRAN   |
+| DT             | latest  | CRAN   |
+| cluster        | latest  | CRAN   |
+| shinyBS        | latest  | CRAN   |
+| shinydashboard | latest  | CRAN   |
+
+### R Packages – Bioconductor
+| Package                       | Version | Source       |
+| ----------------------------- | ------- | ------------ |
+| BiocManager                   | latest  | CRAN         |
+| GenomicFeatures               | latest  | Bioconductor |
+| AnnotationDbi                 | latest  | Bioconductor |
+| BSgenome.Hsapiens.NCBI.GRCh38 | latest  | Bioconductor |
+| biomaRt                       | latest  | Bioconductor |
+| Biostrings                    | latest  | Bioconductor |
+| txdbmaker                     | latest  | Bioconductor |
+
+### Generated data
+| File                  | Location                         | Details                |
+| --------------------- | -------------------------------- | ---------------------- |
+| `txdb_hsa_biomart.db` | `/opt/ASOstool-v2/`              | Built from Ensembl GTF |
+| GTF Downloaded        | `Homo_sapiens.GRCh38.112.gtf.gz` | Ensembl Release 112    |
+
+
