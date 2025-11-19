@@ -195,13 +195,10 @@ docker rm <container_id>
 |---------------------------------------------|------------------------|-------------------------------------------------------------------------------|
 | **Base Image**                              |                        |                                                                               |
 | rocker/tidyverse                            | 4.5.1                  | Docker Hub                                                                    |
-|                                             |                        |                                                                               |
 | **Shiny Server**                            |                        |                                                                               |
 | Shiny Server                                | 1.5.23.1030            | Installed via rocker install script                                            |
-|                                             |                        |                                                                               |
 | **Manually Built Software**                 |                        |                                                                               |
 | ViennaRNA                                   | 2.7.0                  | Downloaded and compiled from source                                            |
-|                                             |                        |                                                                               |
 | **R Packages – CRAN**                       |                        |                                                                               |
 | shiny                                       | latest                 | CRAN                                                                           |
 | shinythemes                                 | latest                 | CRAN                                                                           |
@@ -212,7 +209,6 @@ docker rm <container_id>
 | cluster                                     | latest                 | CRAN                                                                           |
 | shinyBS                                     | latest                 | CRAN                                                                           |
 | shinydashboard                              | latest                 | CRAN                                                                           |
-|                                             |                        |                                                                               |
 | **R Packages – Bioconductor**               |                        |                                                                               |
 | BiocManager                                | latest                 | Installed from CRAN                                                            |
 | GenomicFeatures                            | latest                 | Bioconductor                                                                   |
@@ -221,9 +217,7 @@ docker rm <container_id>
 | biomaRt                                    | latest                 | Bioconductor                                                                   |
 | Biostrings                                 | latest                 | Bioconductor                                                                   |
 | txdbmaker                                  | latest                 | Bioconductor                                                                   |
-|                                            |                        |                                                                               |
 | **Generated Data**                          |                        |                                                                               |
 | Homo_sapiens.GRCh38.112.gtf.gz              | Release 112            | Downloaded from Ensembl                                                       |
 | txdb_hsa_biomart.db                         | generated              | Stored in `/opt/ASOstool-v2/`                                                 |
-|                                             |                        |                                                                               |
 
