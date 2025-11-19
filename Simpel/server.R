@@ -13,10 +13,14 @@ library(dplyr)
 library(DT)
 library(shinyBS)
 #setwd("/home/gebruiker")
-setwd("..")
+# setwd("..")
+
+setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
-function(input, output) {
+source("tools/offtarget.R")
+
+function(input, output, session) {
   showNotification("Finished loading", type = "default", duration = NULL, # Notification stays until clicked away
                    closeButton = TRUE) # Include a close button)
   observeEvent(input$run_button, {
@@ -125,8 +129,10 @@ function(input, output) {
       )
     }
     ##############################################Store all human pre-mRNA sequences
-    path = getwd()
-    getwd()
+    # path = getwd()
+    # getwd()
+    
+    path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
     # Load the TxDb object
     txdb_hsa <- loadDb("txdb_hsa_biomart.db")
     
@@ -179,10 +185,10 @@ function(input, output) {
     
     # Define the marts for mmusculus and hsapiens
     martHS = useEnsembl(biomart="ensembl",
-                        dataset="hsapiens_gene_ensembl", version=105)
+                        dataset="hsapiens_gene_ensembl")
     if (input$Conserved_input == TRUE) {
     martMM = useEnsembl(biomart="ensembl",
-                        dataset="mmusculus_gene_ensembl", version=105)
+                        dataset="mmusculus_gene_ensembl")
     
     # Get the orthologous Ensembl gene for the provided human Ensembl ID
     ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
@@ -260,29 +266,33 @@ function(input, output) {
     ###################count the number of pre-mRNA transcripts with a perfect match 
     
     #this part will take some time to run...
-    uni_tar = dplyr::select(target_annotation, name, length)%>%
-      unique() %>%
-      split(.,.$length)
     
-    uni_tar = lapply(uni_tar, function(X){
-      dict0 = PDict(X$name, max.mismatch = 0)
-      dict1 = PDict(X$name, max.mismatch = 1)
-      
-      #perfect match count
-      pm = vwhichPDict(
-        pdict = dict0, subject = HS,
-        max.mismatch = 0, min.mismatch=0)
-      X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
-      
-      #single mismatch count, without indels
-      mm1 = vwhichPDict(
-        pdict = dict1, subject = HS,
-        max.mismatch = 1, min.mismatch=1)
-      X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-                                 (X))
-      X
-    }) %>%
+    target_annotation <- target_annotation %>%
+      filter(!grepl("^C", name)) %>%
+      mutate(reverse_comp = reverse_complement(name))
+
+    summary_server <- target_annotation %>%
+      head(2) %>%
+      mutate(results = map2(name, length, ~ {
+        res <- all_offt(.x, 2)         
+        res$name <- .x          
+        res$length <- .y        
+        res                    
+      })) %>%
+      pull(results) %>%
       bind_rows()
+    
+    
+    print(summary_server)
+
+    uni_tar <- summary_server %>%
+      group_by(name, length) %>%
+      summarise(
+        gene_hits_pm  = sum(`Total Mismatches` == 0, na.rm = TRUE),
+        gene_hits_1mm = sum(`Total Mismatches` == 1, na.rm = TRUE),
+        .groups = "drop"
+      )
+
     
     print("milestone11")
     
@@ -478,14 +488,102 @@ function(input, output) {
     
     print("milestone21")
     
-    #collect the data, change the name for each gene tested
-    #output$results1 <- renderDataTable(target_region_select)
-   # output$results2 <- renderDataTable(nucleobase_select)
-    
     output$results1 <- renderDataTable({
       datatable(target_region_select, rownames = FALSE) %>%
         formatStyle(names(target_region_select), color = "black")
     })
+
+    current_seq <- reactiveVal(NULL)
+    current_mismatch <- reactiveVal(2)
+    current_offtargets <- reactiveVal(NULL)
+    cached_results <- reactiveVal(list())
+    
+    observeEvent(input$results1_cell_clicked, {
+      
+      seq <- toupper(input$results1_cell_clicked$value)
+      req(seq)
+      req(grepl("^[ACGT]+$", seq, ignore.case = TRUE))
+      
+      current_seq(seq)
+      current_mismatch(2)
+      updateSelectInput(session, "user_mismatch", selected = 2)
+      
+      default_subset <- summary_server %>%
+        filter(toupper(name) == seq, `Total Mismatches` <= 2)
+      
+      current_offtargets(default_subset)
+      
+      output$offtarget_title <- renderText(paste0("Off target results for: ", seq))
+      output$aso_seq <- renderText(paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq)))))
+      output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(default_subset)))
+    })
+    
+    observeEvent(input$apply_mismatch, {
+      
+      req(current_seq())
+      
+      mm  <- as.numeric(input$user_mismatch)
+      seq <- toupper(current_seq())
+      key <- paste0("mm", mm)
+      
+      current_mismatch(mm)
+      cache <- cached_results()
+      
+      if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
+        subset_df <- cache[[seq]][[key]]
+        
+      } else {
+        
+        
+        if (mm %in% c(0,1,2)) {
+          
+          subset_df <- summary_server %>%
+            filter(toupper(name) == seq, `Total Mismatches` <= mm)
+          
+        } else if (mm == 3) {
+          showNotification("Results loading", type = "default", duration = NULL, # Notification stays until clicked away
+                           closeButton = TRUE)
+          
+          new_res <- all_offt(seq, 3)
+          new_res$name   <- seq
+          new_res$length <- nchar(seq)
+          
+          subset_df <- new_res
+        }
+        
+        if (is.null(cache[[seq]])) cache[[seq]] <- list()
+        
+        cache[[seq]][[key]] <- subset_df
+        
+        cached_results(cache)
+      }
+      
+      current_offtargets(subset_df)
+      
+      output$numb_offtargets <- renderText(
+        paste0("# off targets: ", nrow(subset_df))
+      )
+    })
+    
+    
+    output$offtarget_results <- DT::renderDataTable({
+      req(current_offtargets())
+      datatable(current_offtargets(), rownames = FALSE)
+    })
+    
+    output$download_offtarget <- downloadHandler(
+      filename = function() {
+        paste('offtargets_', current_seq(), "_mismatches_", current_mismatch(), "_", Sys.Date(), '.csv')
+      },
+      content = function(con) {
+        data_offtarget <- current_offtargets()
+        req(data_offtarget)
+        write.csv2(data_offtarget, con, row.names = FALSE)
+      }
+    )
+    
+    # -----------------------------------
+
     
     output$results2 <- renderDataTable({
       datatable(nucleobase_select, rownames = FALSE) %>%
