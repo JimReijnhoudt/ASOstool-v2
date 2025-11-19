@@ -3,31 +3,54 @@ library(tidyr)
 library(glue)
 library(dplyr)
 
-rnaseh_results <- function(selected_row_name){
+rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime){
   # The standard score matrix for the nucleotide positions for cleavage. 
   nucleotide_model <- read_excel("../Files/nucleotide_model.xlsx")
   
   # Target sequence. 
-  aso_seq = selected_row_name
-  
-  # Window size.
+  rna_seq = selected_row_name
   window_size = 9
+  rna_len = nchar(rna_seq)
   
-  # All windows of ASO sequence.
-  starts  <- 1:(nchar(aso_seq) - window_size + 1)
-  windows <- substring(aso_seq, starts, starts + (window_size - 1))
+  # Check if windows are possible by size.
+  tmp <- mod_5prime
+  mod_5prime <- mod_3prime
+  mod_3prime <- tmp
+  
+  # Overlap on the 5' end of the rna sequence. 
+  overlap_5prime <- 4
+  start_min  <- max(1, mod_5prime + 1 - overlap_5prime)
+  start_max <- rna_len - mod_3prime - window_size + 1
+  
+  if (start_min > start_max) {
+    showNotification(
+      "Modifications to 5' and 3' ends overlap to much for sequence length.",
+      type = "error",
+      closeButton = TRUE
+    )
+    return(NULL)
+  }
+  
+  # All windows of rna sequence.
+  starts_pos <- start_min:start_max
+  windows <- substring(rna_seq, starts_pos, starts_pos + (window_size - 1))
+  
+  # Remove all overlapping windows.
+  valid_windows <- which(starts_pos >= start_min & starts_pos <= start_max)
+  starts_pos <- starts_pos[valid_windows]
+  windows <- windows[valid_windows]
   
   # To get the dinucleotides from each of the windows.  
   get_pairs <- function(window) {
     sapply(1:(nchar(window) - 1), function(i) substring(window, i, i + 1))
   }
   
-  # Builds the ASO-sequence data-frame. This includes all the windows and dinucleotide pairs. 
+  # Builds the RNA-sequence data-frame. This includes all the windows and dinucleotide pairs. 
   seq_df <- t(sapply(windows, function(w) c(window = w, get_pairs(w))))
   seq_df <- as.data.frame(seq_df, stringsAsFactors = FALSE)
   
   # Add pairs to dataframe.
-  seq_df <- seq_df %>% mutate(pairs = glue("{starts} - {starts + (window_size - 1)}"))
+  seq_df <- seq_df %>% mutate(pairs = glue("{starts_pos} - {starts_pos + (window_size - 1)}"))
   seq_df <- seq_df %>% relocate(pairs, .after = window)
   
   # To rename the columns for ease of use.
