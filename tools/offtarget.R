@@ -101,12 +101,14 @@ fetch_protein_expression <- function(protein_name) {
 }
 
 
-all_offt <- function(sequence) {
+all_offt <- function(sequence, mismatches_allowed) {
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(sequence)
-  mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
+  # mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
   
-  mismatch_conditions <- c("2/")
+  # mismatch_conditions <- c("2/")
+  mismatch_conditions <- paste0(mismatches_allowed, "/")
+  
   strands <- c("+/")
   
   urls_df <- generate_urls(sequence, mismatch_conditions, strands)
@@ -156,6 +158,9 @@ all_offt <- function(sequence) {
         max_equal <- max(protein_row$equal_signs, na.rm = TRUE)
         min_mismatch <- min(protein_row$mismatches, na.rm = TRUE)
         
+        min_deletions <- min(protein_row$deletions, na.rm = TRUE)
+        min_insertions <- min(protein_row$insertions, na.rm = TRUE)
+        
         source_sheet <- paste0(str_replace_all(condition, "\\W+", "_"), "_", str_replace_all(mismatch_condition, "\\W+", "_"), "_mismatch")
         
         summary_row <- data.frame(
@@ -163,6 +168,8 @@ all_offt <- function(sequence) {
           'Source Sheets' = source_sheet,
           'Equal Signs' = max_equal,
           'Total Mismatches' = min_mismatch,
+          'Total Deletions' = min_deletions, 
+          'Total Insertions' = min_insertions,
           stringsAsFactors = FALSE
         )
         
@@ -191,7 +198,7 @@ all_offt <- function(sequence) {
   other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
   # Define new column names for the summary data frame
-  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches",
+  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions",
                     "Gene description", "Brain RNA - amygdala [nTPM]",
                     "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
                     "Brain RNA - cerebral cortex [nTPM]", "Brain RNA - choroid plexus [nTPM]",

@@ -185,10 +185,10 @@ function(input, output) {
     
     # Define the marts for mmusculus and hsapiens
     martHS = useEnsembl(biomart="ensembl",
-                        dataset="hsapiens_gene_ensembl", version=105)
+                        dataset="hsapiens_gene_ensembl")
     if (input$Conserved_input == TRUE) {
     martMM = useEnsembl(biomart="ensembl",
-                        dataset="mmusculus_gene_ensembl", version=105)
+                        dataset="mmusculus_gene_ensembl")
     
     # Get the orthologous Ensembl gene for the provided human Ensembl ID
     ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
@@ -286,7 +286,7 @@ function(input, output) {
     summary_server <- target_annotation %>%
       head(2) %>%
       mutate(results = map2(name, length, ~ {
-        res <- all_offt(.x)          # voer de functie uit
+        res <- all_offt(.x, 2)          # voer de functie uit
         res$name <- .x          # voeg de naam toe aan elke rij
         res$length <- .y        # voeg de lengte toe
         res                     # retourneer verrijkt resultaat

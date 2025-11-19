@@ -101,7 +101,7 @@ fetch_protein_expression <- function(protein_name) {
 }
 
 
-main <- function() {
+main <- function(mismatches_allowed) {
   # Define the file name at the top
   # output_file_name <- "20250801_EH_UNC13A_SNP151&41_ASO146.xlsx"
 
@@ -110,9 +110,10 @@ main <- function() {
   
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(aso_sequence)
-  mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
+  # mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
   
-  mismatch_conditions <- c("2/")
+  # mismatch_conditions <- c("2/")
+  mismatch_conditions <- paste0(mismatches_allowed, "/")
   
   strands <- c("+/")
   
@@ -162,8 +163,13 @@ main <- function() {
       if (!is.null(expression_data) && nrow(expression_data) > 0) {
 
         protein_row <- filtered_data_df %>% filter(str_detect(line, protein_hit))
+        print("protein_row: ")
+        print(protein_row)
+        
         max_equal <- max(protein_row$equal_signs, na.rm = TRUE)
         min_mismatch <- min(protein_row$mismatches, na.rm = TRUE)
+        min_deletions <- min(protein_row$deletions, na.rm = TRUE)
+        min_insertions <- min(protein_row$insertions, na.rm = TRUE)
 
         source_sheet <- paste0(str_replace_all(condition, "\\W+", "_"), "_", str_replace_all(mismatch_condition, "\\W+", "_"), "_mismatch")
         
@@ -172,6 +178,8 @@ main <- function() {
           'Source Sheets' = source_sheet,
           'Equal Signs' = max_equal,
           'Total Mismatches' = min_mismatch,
+          'Total Deletions' = min_deletions, 
+          'Total Insertions' = min_insertions,
           stringsAsFactors = FALSE
         )
         
@@ -217,7 +225,7 @@ main <- function() {
   other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
   # Define new column names for the summary data frame
-  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches",
+  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions",
                     "Gene description", "Brain RNA - amygdala [nTPM]",
                     "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
                     "Brain RNA - cerebral cortex [nTPM]", "Brain RNA - choroid plexus [nTPM]",
@@ -238,7 +246,7 @@ main <- function() {
 }
 
 # ---------- Run ----------
-dataframes <- main()
+dataframes <- main(2)
 urls <- dataframes$urls
 summary_df <- dataframes$summary
 df <- dataframes$df
