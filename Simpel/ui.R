@@ -159,7 +159,7 @@ sidebarLayout(
       dataTableOutput("rnaseh_results"),
       hr(),
       
-      h3("Visualised cleavage site:"),
+      h3("Visualised cleavage site on RNA strand: "),
       uiOutput("cleavage_visual")
     ),
     
