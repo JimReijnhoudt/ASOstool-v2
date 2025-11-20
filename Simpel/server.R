@@ -13,29 +13,32 @@ library(dplyr)
 library(DT)
 library(shinyBS)
 
-# Set working dir
+source("tools/offtarget.R")
+source("../tools/RNaseH_script.R")
+
+# ----------------------------------- working directory ------------------------
 working_dir = getwd()
 setwd(working_dir)
 
 # setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
-source("tools/offtarget.R")
-source("../tools/RNaseH_script.R")
-
 function(input, output, session) {
-  showNotification("Finished loading", type = "default", duration = NULL, # Notification stays until clicked away
-                   closeButton = TRUE) # Include a close button)
+  # ----------------------------------- Notifications UI -----------------------
+  # Notification stays until clicked away
+  showNotification("Finished loading", type = "default", duration = NULL,
+                   closeButton = TRUE)
   observeEvent(input$run_button, {
-    showNotification("Script started", type = "default", duration = NULL, # Notification stays until clicked away
-                     closeButton = TRUE) # Include a close button)
-    #######################################################################functions
-    #Make the tox score function
+    showNotification("Script started", type = "default", duration = NULL,
+                     closeButton = TRUE)
+    
+    # ----------------------------------- Functions ----------------------------
+    # Make the tox score function
     calculate_acute_neurotox <- function(xx) {
-      ## make sure input is in character format
+      # make sure input is in character format
       xx <- as.character(xx)
       
-      ## count the number of each nucleotide
+      # count the number of each nucleotide
       lf <- function(x) {
         x <- tolower(x)
         x <- strsplit(x, "")[[1]]
@@ -43,7 +46,7 @@ function(input, output, session) {
         return(x)
       }
       cnt_nt <- as.data.frame(t(sapply(xx, lf)))
-      ## count number of nucleotides from the 3'-end untill it finds the first g
+      # count number of nucleotides from the 3'-end untill it finds the first g
       gfree3 <- function(x) {
         x <- tolower(x)
         x <- strsplit(x, "")[[1]]
@@ -67,7 +70,7 @@ function(input, output, session) {
     }
     
     if (input$linux_input == TRUE) {
-    #2.5.1 Predict accessibility for an RNA target
+    # 2.5.1 Predict accessibility for an RNA target
     RNAplfold_R = function(seq.char, L.in = 40,W.in = 80, u.in = 16){
       cmmnd2 = paste("RNAplfold -L", L.in, "-W", W.in, "-u",u.in)
       seq.char = as.character(seq.char)
@@ -80,7 +83,7 @@ function(input, output, session) {
       return(acc.tx)
     }
     
-    #2.5.3 Predict duplex formation and self folding of oligonucleotides
+    # 2.5.3 Predict duplex formation and self folding of oligonucleotides
     RNAduplex_R = function(seqs){
       sys_cmd = system('RNAduplex',input = c(seqs,seqs),intern = TRUE)
       as.numeric(regmatches(sys_cmd, regexpr("-?\\d+\\.\\d+", sys_cmd)))
@@ -131,14 +134,18 @@ function(input, output, session) {
              }
       )
     }
-    ##############################################Store all human pre-mRNA sequences
+    # ----------------------------------- Data setup ---------------------------
+    # Store all human pre-mRNA sequences
+    
     # path = getwd()
-    # getwd()
     
     path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
-    # Load the TxDb object
     txdb_hsa <- loadDb("txdb_hsa_biomart.db")
     
+    # --- Harrys data location with script --- 
+    #txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+    
+    # ----------------------------------- milestone 1 --------------------------
     print("milestone1")
     
     # Extract the genes
@@ -147,44 +154,48 @@ function(input, output, session) {
     # Define the chromosomes to keep
     chr_to_keep <- c(as.character(1:22),'X','Y','MT')
     
-    # filtert Hsapiens zodat het alleen de aangegeven chromosomen pakt
+    # Filtert Hsapiens zodat het alleen de aangegeven chromosomen pakt
     Hsapiens@user_seqnames <- setNames(chr_to_keep,chr_to_keep)
     Hsapiens@seqinfo <- Hsapiens@seqinfo[chr_to_keep]
     
     # Subset genes to keep only those on specified chromosomes
     gdb_hsa <- gdb_hsa[seqnames(gdb_hsa) %in% chr_to_keep]
     
+    # ----------------------------------- milestone 2 --------------------------
     print("milestone2")
     
     # Get the sequences *
     HS <- getSeq(Hsapiens, gdb_hsa)
     
-    ############################################target collect the pre-mRNA sequence
-    
-    #define wanted Ensembl ID
+    # ----------------------------------- milestone 3 --------------------------
     print("milestone3")
+    # Target collect the pre-mRNA sequence
+    
+    # Define wanted Ensembl ID
     ensembl_ID = input$ensemble_id_input
     
-    #retrieve a specific RNA target using the Ensembl ID
+    # Retrieve a specific RNA target using the Ensembl ID
     RNA_target = HS[names(HS)==ensembl_ID]
+    
+    # ----------------------------------- milestone 4 --------------------------
     print("milestone4")
     
-    #filters on ensembl ID
+    # Filters on ensembl ID
     target_ranges = gdb_hsa[names(gdb_hsa)==ensembl_ID]
     
-    #extracts the chromosome name for target range,extracts the start and end 
-    #position of the genomic region and note from which strand it is. 
-    #positive strand 1 ('+'), negative strand -1 ('-'), or unspecified 0 ('*').
+    # Extracts the chromosome name for target range,extracts the start and end 
+    # Position of the genomic region and note from which strand it is. 
+    # Positive strand 1 ('+'), negative strand -1 ('-'), or unspecified 0 ('*').
     chr_coord = c(
       chr=as.numeric(as.character(seqnames(target_ranges))),
       start=start(target_ranges),
       end=end(target_ranges),
       strand=ifelse(strand(target_ranges)=="+",1,-1))
     
-    
+    # ----------------------------------- milestone 5 --------------------------
     print("milestone5")
 
-    ###############################Obtain the mouse ortholog of the human RNA target
+    # Obtain the mouse ortholog of the human RNA target
     
     # Define the marts for mmusculus and hsapiens
     martHS = useEnsembl(biomart="ensembl",
@@ -199,6 +210,7 @@ function(input, output, session) {
                       values = ensembl_ID, mart = martHS,
                       bmHeader = FALSE)
     
+    # ----------------------------------- milestone 6 --------------------------
     print("milestone6")
     
     RNA_target_mouse = DNAStringSet(
@@ -209,9 +221,10 @@ function(input, output, session) {
             mart = martMM)$gene_exon_intron)
     }
     
+    # ----------------------------------- milestone 7 --------------------------
     print("milestone7")
     
-    ###############################Obtain all human polymorphisms for the RNA target
+    # Obtain all human polymorphisms for the RNA target
     if (input$polymorphism_input == TRUE) {
       PMs = getBM(attributes = c("minor_allele_freq",
                                "chromosome_start"),
@@ -224,24 +237,25 @@ function(input, output, session) {
       rename(chr_start=chromosome_start, PM_freq=minor_allele_freq)
     }
     
-    ##If Ensembl is offline and still want to test -> load in manual test data.
-    #PMs <- read.csv("~/PMs.csv")
+    # If Ensembl is offline and still want to test -> load in manual test data.
+    # PMs <- read.csv("~/PMs.csv")
     
+    # ----------------------------------- milestone 8 --------------------------
     print("milestone8")
     
-    #set the width of rna_target as value L 
+    # Set the width of rna_target as value L 
     l = width(RNA_target)
     
-    #note length of subsequence
+    # Note length of subsequence
     oligo_lengths = input$oligo_length_range[1]:input$oligo_length_range[2]
     
-    #construct the dataframe
+    # Construct the dataframe
     target_annotation = lapply(oligo_lengths, function(i){
       tibble(start=1:(l-i+1),length=i)}) %>%
       bind_rows() %>%
       mutate(end = start+length-1)
 
-    #Adds "name" sequence to the dataframe
+    # Adds "name" sequence to the dataframe
     target_regions = DNAStringSet(
       RNA_target[[1]],
       start=target_annotation$start,
@@ -250,25 +264,25 @@ function(input, output, session) {
     
     target_annotation$name = names(target_regions)
     
+    # ----------------------------------- milestone 9 --------------------------
     print("milestone9")
     
-    ###########################################Count Nucleobase sequence occurrences
+    # Count Nucleobase sequence occurrences
     
-    #get the sequences
+    # Get the sequences
     tr = target_annotation$name
     
-    #count the sequences by making it a table
+    # Count the sequences by making it a table
     replica = table(tr)
     
-    #save it as NoRepeats
+    # Save it as NoRepeats
     target_annotation$NoRepeats = as.vector(replica[tr])
     
-    
+    # ----------------------------------- milestone 10 -------------------------
     print("milestone10")
     
-    ###################count the number of pre-mRNA transcripts with a perfect match 
-    
-    #this part will take some time to run...
+    # Count the number of pre-mRNA transcripts with a perfect match 
+    # This part will take some time to run...
     
     target_annotation <- target_annotation %>%
       filter(!grepl("^C", name)) %>%
@@ -296,11 +310,11 @@ function(input, output, session) {
         .groups = "drop"
       )
 
-    
-    print("milestone11")
+    # ----------------------------------- milestone 11.1 -----------------------
+    print("milestone11.1")
     
     if (input$linux_input == TRUE) {
-    #3.4 Estimate Transcript Accessibility for the RNA Target at Single-Nucleotide Resolution
+    # 3.4 Estimate Transcript Accessibility for the RNA Target at Single-Nucleotide Resolution
     accessibility = RNAplfold_R(RNA_target,u.in = max(oligo_lengths)) %>%
       as_tibble() %>%
       mutate(end=1:l) %>%
@@ -309,10 +323,13 @@ function(input, output, session) {
     
     target_annotation = left_join(target_annotation,accessibility,by=c('length','end'))
     }
-    print("milestone11.5")
-    ###########################################High-Frequency Polymorphisms analysis
     
-    #correcting end and start cord based on direction   
+    # ----------------------------------- milestone 11.2 -----------------------
+    print("milestone11.2")
+    
+    # High-Frequency Polymorphisms analysis
+    
+    # Correcting end and start cord based on direction   
     if (chr_coord['strand'] == 1) {
       target_annotation$chr_start = chr_coord['start'] + target_annotation$start - 1
       target_annotation$chr_end = chr_coord['start'] + target_annotation$end - 1
@@ -321,10 +338,11 @@ function(input, output, session) {
       target_annotation$chr_end = chr_coord['end'] - target_annotation$start + 1
     }
     
+    # ----------------------------------- milestone 12 -------------------------
     print("milestone12")
     
-    #keep unique names only and extract 
-    #information base on chr_start from target.
+    # Keep unique names only and extract 
+    # Information base on chr_start from target.
     if (input$polymorphism_input == TRUE) {
     
     PM_freq = PMs %>%
@@ -343,70 +361,78 @@ function(input, output, session) {
           PM_count= n()
         )
     
+    # ----------------------------------- milestone 13 -------------------------
     print("milestone13")
     
-    #combine data frames
+    # Combine data frames
     target_annotation = left_join(
       target_annotation, PM_freq,
       by = c("name" = "name", "chr_start" = "chr_start_anno"))
     }
     
+    # ----------------------------------- milestone 14 -------------------------
     print("milestone14")
     
-    ##################################Match RNA Target Regions to the Mouse Ortholog
+    # Match RNA Target Regions to the Mouse Ortholog
     if (input$Conserved_input == TRUE) {
-    #get length
+    # Get length
     lm = width(RNA_target_mouse)
     
-    #make table of mouse information
+    # Make table of mouse information
     MM_tab = lapply(oligo_lengths, function(i){
       tibble(st=1:(lm-i+1),w=i)}) %>%
       bind_rows()
     
+    # ----------------------------------- milestone 15 -------------------------
     print("milestone15")
     
-    #makes dnastringset object with mouse info.
+    # Makes DNAStringSet object with mouse info.
     RNAsitesMM = DNAStringSet(
       RNA_target_mouse[[1]],
       start=MM_tab$st,
       width=MM_tab$w)
     
-    #adds if conserved in mouse.
+    # Adds if conserved in mouse.
     uni_tar$conserved_in_mmusculus = uni_tar$name %in% RNAsitesMM
     }
+    
+    # ----------------------------------- milestone 16 -------------------------
     print("milestone16")
     
-    #bereken aantal "cg"
+    # Bereken aantal "cg"
     uni_tar$CGs = ( uni_tar$length -
                       nchar(gsub('CG','',uni_tar$name)) )/2
     
-    #maak de unique reverse complements van sequences in target regions
+    # Maak de unique reverse complements van sequences in target regions
     nucleobase_seq =unique(reverseComplement(target_regions))
     
-    #voeg ze toe aan uni_tar gekoppeld aan name
+    # Voeg ze toe aan uni_tar gekoppeld aan name
     uni_tar$oligo_seq = as.character(nucleobase_seq[uni_tar$name])
     
-    #toxicity score acute neurotox score (desired >70)
+    # Toxicity score acute neurotox score (desired >70)
     uni_tar$tox_score = calculate_acute_neurotox(uni_tar$oligo_seq)
     
+    # ----------------------------------- milestone 17.1 -----------------------
     print("milestone17.1")
     
     if (input$linux_input == TRUE) {
-    #### deze nog toevoegen wanneer viennaRNA werkt
+    # Deze nog toevoegen wanneer viennaRNA werkt
     uni_tar$sec_energy = RNAselffold_R(uni_tar$oligo_seq)
     uni_tar$duplex_energy = RNAduplex_R(uni_tar$oligo_seq)
-  
+    
+    # ----------------------------------- milestone 17.2 -----------------------
     print("milestone17.2")
     }
-    #join tables
+    # Join tables
     target_regions = left_join(
       target_annotation,
       uni_tar,
       by=c('name','length'))
     
+    # ----------------------------------- milestone 18 -------------------------
     print("milestone18")
     
-    #run the filtering
+    # Run the filtering
     if (input$polymorphism_input == TRUE) {
       target_regions <- target_regions %>%
         mutate(across(
@@ -450,20 +476,19 @@ function(input, output, session) {
       showNotification("No results after filtering, exporting unfiltered list", type = "default", duration = NULL, # Notification stays until clicked away
                        closeButton = TRUE) # Include a close button)
     }
-    
-    ############################################################################
-
-    
+  
+    # ----------------------------------- milestone 19 -------------------------
     print("milestone19")
     
-    #get all unique starting positions in order
+    # Get all unique starting positions in order
     start_pos = sort(unique(target_region_select$start))
     
     num_data_points <- length(start_pos)
     
+    # ----------------------------------- milestone 19.1 -----------------------
     print("milestone19.1")
     
-    #Set amount of clusters
+    # Set amount of clusters
     if (num_data_points > 1) {
       K <- min(10, num_data_points - 1)
     } else {
@@ -471,16 +496,18 @@ function(input, output, session) {
       K <- 1
     }
     
+    # ----------------------------------- milestone 19.2 -----------------------
     print("milestone19.2")
     
     
-    #cluster the selected regions
+    # Cluster the selected regions
     cluster_tab = tibble(
       start = start_pos,
       cluster = clara(x = start_pos, k = K,
                       metric = 'euclidean',
                       pamLike = T, samples=100)$clustering)
     
+    # ----------------------------------- milestone 20 -------------------------
     print("milestone20")
     
     nucleobase_select = left_join(target_region_select,
@@ -489,8 +516,8 @@ function(input, output, session) {
       sample_n(1) %>%
       ungroup()
     
+    # ----------------------------------- milestone 21 -------------------------
     print("milestone21")
-    
     
     # Render the tables.
     output$results1 <- renderDataTable({
@@ -503,7 +530,7 @@ function(input, output, session) {
         formatStyle(names(nucleobase_select), color = "black")
     })
 
-    # ----------------------------------- Fayes deel -------------------------
+    # ----------------------------------- Fayes deel ---------------------------
     
     current_seq <- reactiveVal(NULL)
     current_mismatch <- reactiveVal(2)
@@ -594,7 +621,7 @@ function(input, output, session) {
       }
     )
     
-    # ----------------------------------- Harrys deel -------------------------
+    # ----------------------------------- Harrys deel --------------------------
     
     # String reverse function
     reverse_string <- function(x) {
@@ -784,18 +811,18 @@ function(input, output, session) {
       }
     )
     
+    # ----------------------------------- End of script ------------------------
+    
     # Get the current date
     current_date <- format(Sys.time(), "%Y-%m-%d %H-%M-%S")
     
-    
-    #collect the data, change the name for each gene tested
+    # Collect the data, change the name for each gene tested
     if (input$Download_input == TRUE) {
     write.csv(target_region_select, file = paste0("Results_output_", current_date, ".csv"))
     write.csv(nucleobase_select, file = paste0("Results_output_clustered_", current_date, ".csv"))
     }
     showNotification("Script finished", type = "default", duration = NULL, # Notification stays until clicked away
-                     closeButton = TRUE) # Include a close button)
+                     closeButton = TRUE)
     print("done")
   })
-  
 }
