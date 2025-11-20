@@ -12,6 +12,7 @@ library(rlang)
 library(dplyr)
 library(DT)
 library(shinyBS)
+library(openxlsx)
 
 source("tools/offtarget.R")
 source("../tools/RNaseH_script.R")
@@ -198,17 +199,32 @@ function(input, output, session) {
     # Obtain the mouse ortholog of the human RNA target
     
     # Define the marts for mmusculus and hsapiens
-    martHS = useEnsembl(biomart="ensembl",
-                        dataset="hsapiens_gene_ensembl")
+    martHS <- tryCatch (
+      useEnsembl(biomart="ensembl", dataset="hsapiens_gene_ensembl"),
+      error = function(e) {showNotification("Biomart error: can't reach Ensembl (Human)", type="error"); NULL})
+    if (is.null(martHS)) return(NULL)
+    
     if (input$Conserved_input == TRUE) {
-    martMM = useEnsembl(biomart="ensembl",
-                        dataset="mmusculus_gene_ensembl")
+      
+    martMM <- tryCatch(
+      useEnsembl(biomart="ensembl", dataset="mmusculus_gene_ensembl"),
+      error = function(e) {showNotification("Biomart error: can't reach Ensembl (Mouse)", type="error"); NULL}) 
+    if (is.null(martMM)) return(NULL)
     
     # Get the orthologous Ensembl gene for the provided human Ensembl ID
-    ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
-                      filters = "ensembl_gene_id",
-                      values = ensembl_ID, mart = martHS,
-                      bmHeader = FALSE)
+    ortho_ENS <- tryCatch(
+      getBM(attributes = "mmusculus_homolog_ensembl_gene",
+            filters = "ensembl_gene_id",
+            values = ensembl_ID, mart = martHS,
+            bmHeader = FALSE),
+      error = function(e) {showNotification("Biomart error: can't reach Ensembl (Ortho)", type="error"); NULL})
+    if (is.null(ortho_ENS)) return(NULL)
+    
+    if (now(ortho_ENS) == 0 || is.na(ortho_ENS$mmusculus_homolog_ensembl_gene[1]) ||
+        ortho_ENS$mmusculus_homolog_ensembl_gene[1] == "") {
+      showNotification("No mouse ortholog found for this gene.", type="warning")
+      return(NULL)
+    }
     
     # ----------------------------------- milestone 6 --------------------------
     print("milestone6")
