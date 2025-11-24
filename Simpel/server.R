@@ -25,6 +25,8 @@ setwd(working_dir)
 # setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
+  
+
 function(input, output, session) {
   # ----------------------------------- Notifications UI -----------------------
   # Notification stays until clicked away
@@ -34,6 +36,7 @@ function(input, output, session) {
     duration = NULL,
     closeButton = TRUE
   )
+  t1 <- Sys.time()
   observeEvent(input$run_button, {
     showNotification(
       "Script started",
@@ -210,9 +213,11 @@ function(input, output, session) {
     
     # ----------------------------------- milestone 4 --------------------------
     print("milestone4")
-    
-    # Filters on ensembl ID
+
+    print(RNA_target)
+    #filters on ensembl ID
     target_ranges = gdb_hsa[names(gdb_hsa) == ensembl_ID]
+
     
     # Extracts the chromosome name for target range,extracts the start and end
     # Position of the genomic region and note from which strand it is.
@@ -227,94 +232,29 @@ function(input, output, session) {
     # ----------------------------------- milestone 5 --------------------------
     print("milestone5")
     
-    # Increase BiomaRt timeout - 3 minutes max
-    options(biomaRt = list(timeout = 180))
-    
-    # Function to safely connect to Ensembl with retries
-    retry_useEnsembl <- function(biomart,
-                                 dataset,
-                                 version = NULL,
-                                 tries = 3) {
-      for (i in 1:tries) {
-        res <- tryCatch(
-          useEnsembl(
-            biomart = biomart,
-            dataset = dataset,
-            version = version
-          ),
-          error = function(e)
-            NULL
-        )
-        if (!is.null(res))
-          return(res)
-        Sys.sleep(5)
-      }
-      return(NULL)
-    }
-    
-    # Connect to human Ensembl
-    martHS <- retry_useEnsembl("ensembl", "hsapiens_gene_ensembl", version =
-                                 105)
-    if (is.null(martHS)) {
-      showNotification("Failed to connect to Ensembl (Human)", type = "error")
-      return(NULL)
-    }
-    
-    # If the user wants conserved sequences
+
+    # Define the marts for mmusculus and hsapiens
+    martHS = useEnsembl(biomart="ensembl",
+                        dataset="hsapiens_gene_ensembl")
     if (input$Conserved_input == TRUE) {
-      # Connect to mouse Ensembl
-      martMM <- retry_useEnsembl("ensembl", "mmusculus_gene_ensembl", version =
-                                   105)
-      if (is.null(martMM)) {
-        showNotification("Failed to connect to Ensembl (Mouse)", type = "error")
-        return(NULL)
-      }
-      
-      # Get the mouse ortholog for the provided human Ensembl ID
-      ortho_ENS <- tryCatch(
-        getBM(
-          attributes = "mmusculus_homolog_ensembl_gene",
-          filters = "ensembl_gene_id",
-          values = ensembl_ID,
-          mart = martHS,
-          bmHeader = FALSE
-        ),
-        error = function(e) {
-          showNotification("Failed to retrieve mouse ortholog from Ensembl", type =
-                             "error")
-          NULL
-        }
-      )
-      if (is.null(ortho_ENS) || nrow(ortho_ENS) == 0) {
-        showNotification("No mouse ortholog found for this human gene", type = "warning")
-        return(NULL)
-      }
-      
-      # ----------------------------------- milestone 6 ------------------------
-      print("milestone6")
-      
-      # Retrieve mouse pre-mRNA sequences
-      mouse_seq_df <- tryCatch(
-        getBM(
-          attributes = c("gene_exon_intron", "ensembl_gene_id"),
-          filters = "ensembl_gene_id",
-          values = ortho_ENS$mmusculus_homolog_ensembl_gene,
-          mart = martMM
-        ),
-        error = function(e) {
-          showNotification("Failed to retrieve mouse sequences from Ensembl", type =
-                             "error")
-          NULL
-        }
-      )
-      
-      if (is.null(mouse_seq_df) || nrow(mouse_seq_df) == 0) {
-        showNotification("No mouse sequences retrieved", type = "warning")
-        return(NULL)
-      }
-      
-      RNA_target_mouse <- DNAStringSet(mouse_seq_df$gene_exon_intron)
-    }
+    martMM = useEnsembl(biomart="ensembl",
+                        dataset="mmusculus_gene_ensembl")
+    
+    # Get the orthologous Ensembl gene for the provided human Ensembl ID
+    ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
+                      filters = "ensembl_gene_id",
+                      values = ensembl_ID, mart = martHS,
+                      bmHeader = FALSE)
+    
+    print("milestone6")
+    
+    RNA_target_mouse = DNAStringSet(
+      getBM(attributes = c("gene_exon_intron","ensembl_gene_id"),
+            filters = "ensembl_gene_id",
+            values =
+              ortho_ENS$mmusculus_homolog_ensembl_gene,
+            mart = martMM)$gene_exon_intron)
+
     
     # ----------------------------------- milestone 7 --------------------------
     print("milestone7")
@@ -333,11 +273,10 @@ function(input, output, session) {
                !duplicated(chromosome_start)) %>%
         rename(chr_start = chromosome_start, PM_freq = minor_allele_freq)
     }
-    
-    # If Ensembl is offline and still want to test -> load in manual test data.
-    # PMs <- read.csv("~/PMs.csv")
-    
-    # ----------------------------------- milestone 8 --------------------------
+
+    ##If Ensembl is offline and still want to test -> load in manual test data.
+    #PMs <- read.csv("~/PMs.csv")
+
     print("milestone8")
     
     # Set the width of rna_target as value L
@@ -375,8 +314,37 @@ function(input, output, session) {
     # Save it as NoRepeats
     target_annotation$NoRepeats = as.vector(replica[tr])
     
+    print("milestone10.1")
+    
+    ###################count the number of pre-mRNA transcripts with a perfect match 
+
+    #this part will take some time to run...
+    uni_tar = dplyr::select(target_annotation, name, length)%>%
+      unique() %>%
+      split(.,.$length)
+    
+    uni_tar1 = lapply(uni_tar, function(X){
+      dict0 = PDict(X$name, max.mismatch = 0)
+      dict1 = PDict(X$name, max.mismatch = 1)
+      
+      #perfect match count
+      pm = vwhichPDict(
+        pdict = dict0, subject = HS,
+        max.mismatch = 0, min.mismatch=0)
+      X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
+      
+      #single mismatch count, without indels
+      mm1 = vwhichPDict(
+        pdict = dict1, subject = HS,
+        max.mismatch = 1, min.mismatch=1)
+      X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
+                                 (X))
+      X
+    }) %>%
+      bind_rows()
+
     # ----------------------------------- milestone 10 -------------------------
-    print("milestone10")
+    print("milestone10.2")
     
     # Count the number of pre-mRNA transcripts with a perfect match
     # This part will take some time to run...
@@ -395,10 +363,8 @@ function(input, output, session) {
         res$length <- .y
         res
       })) %>%
-      pull(results) %>%
-      bind_rows()
-    
-    
+      pull(results)
+  
     print(summary_server)
     
     uni_tar <- summary_server %>%
@@ -468,6 +434,7 @@ function(input, output, session) {
         by = c("name" = "name", "chr_start" = "chr_start_anno")
       )
     }
+    View(target_annotation)
     
     # ----------------------------------- milestone 14 -------------------------
     print("milestone14")
@@ -1029,6 +996,10 @@ function(input, output, session) {
       write.csv(nucleobase_select,
                 file = paste0("Results_output_clustered_", current_date, ".csv"))
     }
+
+    t2 <- Sys.time()
+    time <- t2 - t1
+    print(time)
     showNotification(
       "Script finished",
       type = "default",
