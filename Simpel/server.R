@@ -17,6 +17,7 @@ setwd("..")
 print("work directory set")
 
 function(input, output) {
+  t1 <- Sys.time()
   showNotification("Finished loading", type = "default", duration = NULL, # Notification stays until clicked away
                    closeButton = TRUE) # Include a close button)
   observeEvent(input$run_button, {
@@ -159,7 +160,7 @@ function(input, output) {
     #retrieve a specific RNA target using the Ensembl ID
     RNA_target = HS[names(HS)==ensembl_ID]
     print("milestone4")
-    
+    print(RNA_target)
     #filters on ensembl ID
     target_ranges = gdb_hsa[names(gdb_hsa)==ensembl_ID]
     
@@ -179,10 +180,10 @@ function(input, output) {
     
     # Define the marts for mmusculus and hsapiens
     martHS = useEnsembl(biomart="ensembl",
-                        dataset="hsapiens_gene_ensembl", version=105)
+                        dataset="hsapiens_gene_ensembl")
     if (input$Conserved_input == TRUE) {
     martMM = useEnsembl(biomart="ensembl",
-                        dataset="mmusculus_gene_ensembl", version=105)
+                        dataset="mmusculus_gene_ensembl")
     
     # Get the orthologous Ensembl gene for the provided human Ensembl ID
     ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
@@ -214,10 +215,10 @@ function(input, output) {
       filter(!is.na(minor_allele_freq), !duplicated(chromosome_start)) %>%
       rename(chr_start=chromosome_start, PM_freq=minor_allele_freq)
     }
-    
+
     ##If Ensembl is offline and still want to test -> load in manual test data.
     #PMs <- read.csv("~/PMs.csv")
-    
+
     print("milestone8")
     
     #set the width of rna_target as value L 
@@ -254,11 +255,10 @@ function(input, output) {
     #save it as NoRepeats
     target_annotation$NoRepeats = as.vector(replica[tr])
     
-    
     print("milestone10")
     
     ###################count the number of pre-mRNA transcripts with a perfect match 
-    
+
     #this part will take some time to run...
     uni_tar = dplyr::select(target_annotation, name, length)%>%
       unique() %>%
@@ -309,7 +309,7 @@ function(input, output) {
     }
     
     print("milestone12")
-    
+    View(target_annotation)
     #keep unique names only and extract 
     #information base on chr_start from target.
     if (input$polymorphism_input == TRUE) {
@@ -330,7 +330,7 @@ function(input, output) {
       target_annotation, PMmax,
       by = c("name", "chr_start"))
     }
-    
+    View(target_annotation)
     print("milestone14")
     
     ##################################Match RNA Target Regions to the Mouse Ortholog
@@ -493,6 +493,9 @@ function(input, output) {
     }
     showNotification("Script finished", type = "default", duration = NULL, # Notification stays until clicked away
                      closeButton = TRUE) # Include a close button)
+    t2 <- Sys.time()
+    time <- t2 - t1
+    print(time)
     print("done")
   })
   
