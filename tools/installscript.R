@@ -18,7 +18,8 @@ install_if_missing <- function(package_name) {
 # List of packages to check and install
 packages <- c("shinythemes", "shiny", "GenomicFeatures", "AnnotationDbi",
               "BSgenome.Hsapiens.NCBI.GRCh38", "biomaRt", "Biostrings",
-              "tidyverse", "cluster", "rlang", "dplyr", "DT", "shinyBS", "txdbmaker")
+              "tidyverse", "cluster", "rlang", "dplyr", "DT", "shinyBS",
+              "shinydashboard")
 
 # Install BiocManager if not already installed
 if (!require("BiocManager", quietly = TRUE)) {
@@ -35,6 +36,7 @@ library(GenomicFeatures)
 library(AnnotationDbi)
 library(BSgenome.Hsapiens.NCBI.GRCh38)
 library(biomaRt)
+library(BiocManager)
 library(Biostrings)
 library(tidyverse)
 library(cluster)
@@ -42,6 +44,8 @@ library(rlang)
 library(dplyr)
 library(DT)
 library(shinyBS)
-library(txdbmaker)
 
+install.packages("BiocFileCache")
+install.packages("devtools")
+devtools::install_version("dbplyr", version = "2.3.4")
 print("Done")
