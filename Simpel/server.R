@@ -870,101 +870,114 @@ function(input, output, session) {
                                     current_mismatch,
                                     current_offtargets,
                                     cached_results) {
-      observeEvent({
-        list(input[[paste0(table_id, "_cell_clicked")]], input[[paste0(table_id, "_rows_selected")]])
-      }, {
-        cell <- input[[paste0(table_id, "_cell_clicked")]]
-        row  <- input[[paste0(table_id, "_rows_selected")]]
-        
-        if (!is.null(cell) && !is.null(cell$row)) {
-          session$sendCustomMessage("selectRow", list(table = table_id, row   = cell$row))
-        }
-        
-        if (!is.null(row) && length(row) > 0) {
-          other_table <- if (table_id == "results1")
-            "results2"
-          else
-            "results1"
-          proxy_other <- dataTableProxy(other_table)
-          selectRows(proxy_other, NULL)
+      
+      observeEvent(
+        list(
+          input[[paste0(table_id, "_cell_clicked")]],
+          input[[paste0(table_id, "_rows_selected")]]
+        ),
+        {
+          cell <- input[[paste0(table_id, "_cell_clicked")]]
+          row  <- input[[paste0(table_id, "_rows_selected")]]
           
-          row_data <- table_data[row, ]
-          
-          # Off-target functionality
-          seq <- toupper(row_data$name)
-          
-          if (grepl("^[ACGT]+$", seq)) {
-            current_seq(seq)
-            current_mismatch(2)
-            updateSelectInput(session, "user_mismatch", selected = 2)
-            
-            default_subset <- summary_server %>%
-              filter(toupper(name) == seq, `Total Mismatches` <= 2)
-            
-            current_offtargets(default_subset)
-            
-            # ------------------------ test -------------------
-            if (input$linux_input == TRUE) {
-              for (offtargets in default_subset) {
-                offtarget_seq <- gsub("-", "", offtargets$`Subject sequence`)
-                l_ot <- width(offtarget_seq)
-                offtarget_accessibility = RNAplfold_R(offtarget_seq, u.in = max(oligo_lengths)) %>%
-                  as_tibble() %>%
-                  mutate(end = 1:l_ot) %>%
-                  gather(length, accessibility, -end) %>%
-                  mutate(length = as.double(length))
-                
-                target_annotation = left_join(target_annotation, accessibility, by =
-                                                c('length', 'end'))
-              }
-            }
-            # ------------------------ test -------------------
-            }
-          
-            
-            output$offtarget_title <- renderText(paste0("Off target results for: ", seq))
-            output$aso_seq <- renderText(paste0(
-              "ASO sequence: ",
-              as.character(reverseComplement(DNAString(seq)))
-            ))
-            output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(default_subset)))
+          # ---------------- CELL CLICK SYNC ----------------
+          if (!is.null(cell) && !is.null(cell$row)) {
+            session$sendCustomMessage("selectRow",
+                                      list(table = table_id, row = cell$row))
           }
           
-          # RNaseH functionality
-          selected_target(row_data)
-          oligo_sequence(row_data$reverse_comp)
-          
-          rnaseh_data <- rnaseh_results(
-            selected_row_name = row_data$name,
-            mod_5prime = 0,
-            mod_3prime = 0
-          )
-          
-          rnaseh_stored(rnaseh_data)
-          
-          output$rnaseh_title <- renderText(paste0("RNase H results for: ", row_data$name))
-          
-          output$rnaseh_info <- renderText({
-            HTML(
-              paste0(
-                "length of sequence: ",
-                row_data$length,
-                "<br>",
-                "Oligo sequence (ASO): ",
-                oligo_sequence()
+          # ---------------- ROW CLICK ----------------
+          if (!is.null(row) && length(row) > 0) {
+            
+            other_table <- if (table_id == "results1") "results2" else "results1"
+            proxy_other <- dataTableProxy(other_table)
+            selectRows(proxy_other, NULL)
+            
+            row_data <- table_data[row, ]
+            
+            # ---------------- Off-target functionality ----------------
+            seq <- toupper(row_data$name)
+            
+            if (grepl("^[ACGT]+$", seq)) {
+              current_seq(seq)
+              current_mismatch(2)
+              updateSelectInput(session, "user_mismatch", selected = 2)
+              
+              default_subset <- summary_server %>%
+                filter(toupper(name) == seq, `Total Mismatches` <= 2)
+              
+              current_offtargets(default_subset)
+              
+              if (input$linux_input == TRUE) {
+                for (offtargets in default_subset) {
+                  offtarget_seq <- gsub("-", "", offtargets$`Subject sequence`)
+                  l_ot <- width(offtarget_seq)
+                  
+                  offtarget_accessibility <- RNAplfold_R(offtarget_seq, u.in = max(oligo_lengths)) %>%
+                    as_tibble() %>%
+                    mutate(end = 1:l_ot) %>%
+                    gather(length, accessibility, -end) %>%
+                    mutate(length = as.double(length))
+                  
+                  target_annotation <- left_join(
+                    target_annotation,
+                    offtarget_accessibility,
+                    by = c("length", "end")
+                  )
+                }
+              }
+              
+              output$offtarget_title <- renderText(
+                paste0("Off target results for: ", seq)
               )
+              output$aso_seq <- renderText(
+                paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq))))
+              )
+              output$numb_offtargets <- renderText(
+                paste0("# off targets: ", nrow(default_subset))
+              )
+            }
+            
+            # ---------------- RNaseH functionality ----------------
+            selected_target(row_data)
+            oligo_sequence(row_data$reverse_comp)
+            
+            rnaseh_data <- rnaseh_results(
+              selected_row_name = row_data$name,
+              mod_5prime = 0,
+              mod_3prime = 0
             )
-          })
-          
-          output$rnaseh_results <- renderDataTable({
-            datatable(rnaseh_data,
-                      selection = list(mode = "single", selected = 1))
-          })
-          
-          updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
+            
+            rnaseh_stored(rnaseh_data)
+            
+            output$rnaseh_title <- renderText(
+              paste0("RNase H results for: ", row_data$name)
+            )
+            
+            output$rnaseh_info <- renderText({
+              HTML(paste0(
+                "length of sequence: ", row_data$length, "<br>",
+                "Oligo sequence (ASO): ", oligo_sequence()
+              ))
+            })
+            
+            output$rnaseh_results <- renderDataTable({
+              datatable(
+                rnaseh_data,
+                selection = list(mode = "single", selected = 1)
+              )
+            })
+            
+            # ---------------- TAB SWITCH ONLY ON ROW CLICK ----------------
+            updateTabsetPanel(
+              session,
+              "tabs_main",
+              selected = "RNase H cleavage results"
+            )
+            
+          } # END row-click block
         }
-        
-      )
+      ) # END observeEvent
     }
     
     # Table one handler call
