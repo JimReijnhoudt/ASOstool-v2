@@ -36,6 +36,14 @@ function(input, output, session) {
     duration = NULL,
     closeButton = TRUE
   )
+  
+  observeEvent(input$run_button, {
+    showNotification(
+      "Script started",
+      type = "default",
+      duration = NULL,
+      closeButton = TRUE
+    )
     # ----------------------------------- Functions ----------------------------
     # Make the tox score function
     calculate_acute_neurotox <- function(xx) {
@@ -987,8 +995,15 @@ function(input, output, session) {
       write.csv(nucleobase_select,
                 file = paste0("Results_output_clustered_", current_date, ".csv"))
     }
-
+    showNotification(
+      "Script finished",
+      type = "default",
+      duration = NULL,
+      # Notification stays until clicked away
+      closeButton = TRUE
+    )
   
     print("done")
-  }
+  
+)}
 }

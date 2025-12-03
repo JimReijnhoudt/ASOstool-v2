@@ -49,6 +49,8 @@ filter_data <- function(data, criterion) {
   mismatch_col <- integer()
   ins_col <- integer()
   del_col <- integer()
+  sub_col <- character()
+  query_col <- character()
   
   for (line in lines) {
     if (any(str_starts(line, start))) {
@@ -68,6 +70,12 @@ filter_data <- function(data, criterion) {
         
         del_col <- c(del_col, del)
         ins_col <- c(ins_col, ins)
+        
+        subs <- as.character(parts[9])
+        quers <- as.character(parts[8])
+        
+        sub_col <- c(sub_col, subs)
+        query_col <- c(query_col, quers)
       }
     }
   }
@@ -78,6 +86,8 @@ filter_data <- function(data, criterion) {
     mismatches = mismatch_col,
     deletions = del_col, 
     insertions = ins_col,
+    subject_seq = sub_col,
+    query_seq = query_col,
     stringsAsFactors = FALSE
   )
   return(df)
@@ -120,6 +130,8 @@ all_offt <- function(sequence, mismatches_allowed) {
     mismatches = integer(),
     deletions = integer(), 
     insertions = integer(),
+    subject_seq = character(),
+    query_seq = character(),
     stringsAsFactors = FALSE
   )
 
@@ -158,6 +170,20 @@ all_offt <- function(sequence, mismatches_allowed) {
         min_deletions <- min(protein_row$deletions, na.rm = TRUE)
         min_insertions <- min(protein_row$insertions, na.rm = TRUE)
         
+        chosen_row <- protein_row %>%
+          filter(
+            equal_signs == max_equal,
+            mismatches == min_mismatch,
+            deletions == min_deletions,
+            insertions == min_insertions
+          ) %>%
+          slice(1)
+        
+        print(chosen_row)
+        
+        subject_seq <- chosen_row$subject_seq
+        query_seq   <- chosen_row$query_seq
+        
         source_sheet <- paste0(str_replace_all(condition, "\\W+", "_"), "_", str_replace_all(mismatch_condition, "\\W+", "_"), "_mismatch")
         
         summary_row <- data.frame(
@@ -167,6 +193,8 @@ all_offt <- function(sequence, mismatches_allowed) {
           'Total Mismatches' = min_mismatch,
           'Total Deletions' = min_deletions, 
           'Total Insertions' = min_insertions,
+          'Subject sequence' = subject_seq,
+          'Query sequence' = query_seq,
           stringsAsFactors = FALSE
         )
         
@@ -184,6 +212,8 @@ all_offt <- function(sequence, mismatches_allowed) {
         mismatches = NULL,
         deletions = NULL, 
         insertions = NULL,
+        subject_seq = NULL,
+        query_seq = NULL,
         stringsAsFactors = FALSE
       )
     }
@@ -195,7 +225,7 @@ all_offt <- function(sequence, mismatches_allowed) {
   other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
   # Define new column names for the summary data frame
-  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions",
+  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions", "Subject sequence", "Query sequence",
                     "Gene description", "Brain RNA - amygdala [nTPM]",
                     "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
                     "Brain RNA - cerebral cortex [nTPM]", "Brain RNA - choroid plexus [nTPM]",
@@ -211,7 +241,7 @@ all_offt <- function(sequence, mismatches_allowed) {
 
 
 # # ---------- Run ----------
-# dataframes <- all_offt("CACACCATGCACATTCAA")
+# dataframes <- all_offt("TTTTTGCCATCCTGGGCGCT", 2)
 # urls <- dataframes$urls
 # summary_df <- dataframes$summary
 # df <- dataframes$df
