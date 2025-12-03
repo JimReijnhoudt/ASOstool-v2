@@ -15,18 +15,14 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   condition_col <- character()
   url_col <- character()
   
-  for (st in strands) {
-    for (mc in mismatch_conditions) {
       for (cond in conditions) {
-        url <- paste0(base_url, cond, mc, st, sequence, ".txt")
+        url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".txt")
         
-        mismatch_col <- c(mismatch_col, mc)
-        strand_col <- c(strand_col, st)
+        mismatch_col <- c(mismatch_col, mismatch_conditions)
+        strand_col <- c(strand_col, strands)
         condition_col <- c(condition_col, cond)
         url_col <- c(url_col, url)
-      }
-    }
-  }
+        }
   
   # save url, mismatch and condition to a dataframe
   urls_df <- data.frame(
