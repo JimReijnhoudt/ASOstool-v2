@@ -36,7 +36,7 @@ function(input, output, session) {
     duration = NULL,
     closeButton = TRUE
   )
-  t1 <- Sys.time()
+  
   observeEvent(input$run_button, {
     showNotification(
       "Script started",
@@ -44,7 +44,6 @@ function(input, output, session) {
       duration = NULL,
       closeButton = TRUE
     )
-    
     # ----------------------------------- Functions ----------------------------
     # Make the tox score function
     calculate_acute_neurotox <- function(xx) {
@@ -173,11 +172,11 @@ function(input, output, session) {
     
     # path = getwd()
     
-    # --- Jims data location with docker --- 
-    txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+    #path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
+    #txdb_hsa <- loadDb("txdb_hsa_biomart.db")
     
     # --- Harrys data location with script ---
-    #txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+    txdb_hsa <- loadDb("../Data/txdb_hsa.db")
     
     # ----------------------------------- milestone 1 --------------------------
     print("milestone1")
@@ -323,25 +322,25 @@ function(input, output, session) {
       unique() %>%
       split(.,.$length)
     
-    uni_tar1 = lapply(uni_tar, function(X){
-      dict0 = PDict(X$name, max.mismatch = 0)
-      dict1 = PDict(X$name, max.mismatch = 1)
-      
-      #perfect match count
-      pm = vwhichPDict(
-        pdict = dict0, subject = HS,
-        max.mismatch = 0, min.mismatch=0)
-      X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
-      
-      #single mismatch count, without indels
-      mm1 = vwhichPDict(
-        pdict = dict1, subject = HS,
-        max.mismatch = 1, min.mismatch=1)
-      X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-                                 (X))
-      X
-    }) %>%
-      bind_rows()
+    # uni_tar1 = lapply(uni_tar, function(X){
+    #   dict0 = PDict(X$name, max.mismatch = 0)
+    #   dict1 = PDict(X$name, max.mismatch = 1)
+    #   
+    #   #perfect match count
+    #   pm = vwhichPDict(
+    #     pdict = dict0, subject = HS,
+    #     max.mismatch = 0, min.mismatch=0)
+    #   X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
+    #   
+    #   #single mismatch count, without indels
+    #   mm1 = vwhichPDict(
+    #     pdict = dict1, subject = HS,
+    #     max.mismatch = 1, min.mismatch=1)
+    #   X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
+    #                              (X))
+    #   X
+    # }) %>%
+    #   bind_rows()
 
     # ----------------------------------- milestone 10 -------------------------
     print("milestone10.2")
@@ -363,9 +362,8 @@ function(input, output, session) {
         res$length <- .y
         res
       })) %>%
-      pull(results)
-  
-    print(summary_server)
+      pull(results) %>%
+      bind_rows()
     
     uni_tar <- summary_server %>%
       group_by(name, length) %>%
@@ -905,6 +903,25 @@ function(input, output, session) {
             
             current_offtargets(default_subset)
             
+            # ------------------------ test -------------------
+            if (input$linux_input == TRUE) {
+              for (offtargets in default_subset) {
+                offtarget_seq <- gsub("-", "", offtargets$`Subject sequence`)
+                l_ot <- width(offtarget_seq)
+                offtarget_accessibility = RNAplfold_R(offtarget_seq, u.in = max(oligo_lengths)) %>%
+                  as_tibble() %>%
+                  mutate(end = 1:l_ot) %>%
+                  gather(length, accessibility, -end) %>%
+                  mutate(length = as.double(length))
+                
+                target_annotation = left_join(target_annotation, accessibility, by =
+                                                c('length', 'end'))
+              }
+            }
+            # ------------------------ test -------------------
+            }
+          
+            
             output$offtarget_title <- renderText(paste0("Off target results for: ", seq))
             output$aso_seq <- renderText(paste0(
               "ASO sequence: ",
@@ -996,10 +1013,6 @@ function(input, output, session) {
       write.csv(nucleobase_select,
                 file = paste0("Results_output_clustered_", current_date, ".csv"))
     }
-
-    t2 <- Sys.time()
-    time <- t2 - t1
-    print(time)
     showNotification(
       "Script finished",
       type = "default",
@@ -1007,6 +1020,9 @@ function(input, output, session) {
       # Notification stays until clicked away
       closeButton = TRUE
     )
+  
     print("done")
+  
+    }
   })
 }

@@ -5,9 +5,6 @@
 .txdb_hsa_biomart.db
 .Homo_sapiens.GRCh38.112.gtf.gz
 .Homo_sapiens.GRCh38.115.gtf.gz
-ASOstool-v2.Rproj
-txdb_hsa_biomart.db
-OMIM_key.txt
 Merijn/
 txdb_hsa_biomart.db
 ASOstool-v2.Rproj

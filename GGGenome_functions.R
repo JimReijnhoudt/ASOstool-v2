@@ -15,14 +15,18 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   condition_col <- character()
   url_col <- character()
   
+  for (st in strands) {
+    for (mc in mismatch_conditions) {
       for (cond in conditions) {
-        url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".txt")
+        url <- paste0(base_url, cond, mc, st, sequence, ".txt")
         
-        mismatch_col <- c(mismatch_col, mismatch_conditions)
-        strand_col <- c(strand_col, strands)
+        mismatch_col <- c(mismatch_col, mc)
+        strand_col <- c(strand_col, st)
         condition_col <- c(condition_col, cond)
         url_col <- c(url_col, url)
-        }
+      }
+    }
+  }
   
   # save url, mismatch and condition to a dataframe
   urls_df <- data.frame(
@@ -130,7 +134,7 @@ all_offt <- function(sequence, mismatches_allowed) {
     query_seq = character(),
     stringsAsFactors = FALSE
   )
-
+  
   
   # Loop over each URL and retrieve the data from it
   for (i in 1:nrow(urls_df)) {
@@ -150,55 +154,6 @@ all_offt <- function(sequence, mismatches_allowed) {
       next
     }
     
-    # Extract all unique protein names into a vector
-    protein_hits <- str_match(filtered_data_df$line, "NM_\\d+\\.\\d+\\|([^;]+)")[,2]
-    protein_hits <- unique(na.omit(protein_hits))
-    
-    # Loop over all unique proteins and fill the summary_df data frame with the corresponding values
-    for (protein_hit in protein_hits) {
-      expression_data <- fetch_protein_expression(protein_hit)
-      if (!is.null(expression_data) && nrow(expression_data) > 0) {
-        
-        protein_row <- filtered_data_df %>% filter(str_detect(line, protein_hit))
-        max_equal <- max(protein_row$equal_signs, na.rm = TRUE)
-        min_mismatch <- min(protein_row$mismatches, na.rm = TRUE)
-        
-        min_deletions <- min(protein_row$deletions, na.rm = TRUE)
-        min_insertions <- min(protein_row$insertions, na.rm = TRUE)
-        
-        chosen_row <- protein_row %>%
-          filter(
-            equal_signs == max_equal,
-            mismatches == min_mismatch,
-            deletions == min_deletions,
-            insertions == min_insertions
-          ) %>%
-          slice(1)
-        
-        subject_seq <- chosen_row$subject_seq
-        query_seq   <- chosen_row$query_seq
-        
-        source_sheet <- paste0(str_replace_all(condition, "\\W+", "_"), "_", str_replace_all(mismatch_condition, "\\W+", "_"), "_mismatch")
-        
-        summary_row <- data.frame(
-          'Protein Hit' = protein_hit,
-          'Source Sheets' = source_sheet,
-          'Equal Signs' = max_equal,
-          'Total Mismatches' = min_mismatch,
-          'Total Deletions' = min_deletions, 
-          'Total Insertions' = min_insertions,
-          'Subject sequence' = subject_seq,
-          'Query sequence' = query_seq,
-          stringsAsFactors = FALSE
-        )
-        
-        summary_row <- bind_cols(summary_row, expression_data[1, 2:ncol(expression_data)])
-        summary_df <- bind_rows(summary_df, summary_row)
-      }
-      else {
-        print(paste("No expression data found for protein", protein_hit))
-      }
-    }
     if (nrow(all_df) == 0) {
       all_df <- data.frame(
         line = NULL,
@@ -218,19 +173,7 @@ all_offt <- function(sequence, mismatches_allowed) {
   prespliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|prespliced"), ]
   other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
-  # Define new column names for the summary data frame
-  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions", "Subject sequence", "Query sequence",
-                    "Gene description", "Brain RNA - amygdala [nTPM]",
-                    "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
-                    "Brain RNA - cerebral cortex [nTPM]", "Brain RNA - choroid plexus [nTPM]",
-                    "Brain RNA - hippocampal formation [nTPM]", "Brain RNA - hypothalamus [nTPM]",
-                    "Brain RNA - medulla oblongata [nTPM]", "Brain RNA - midbrain [nTPM]",
-                    "Brain RNA - pons [nTPM]", "Brain RNA - spinal cord [nTPM]",
-                    "Brain RNA - thalamus [nTPM]")
-  
-  colnames(summary_df) <- new_colnames
-  
-  return(summary_df)
+  return(all_df)
 }
 
 
