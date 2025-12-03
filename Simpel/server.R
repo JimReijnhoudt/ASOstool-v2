@@ -36,15 +36,6 @@ function(input, output, session) {
     duration = NULL,
     closeButton = TRUE
   )
-  t1 <- Sys.time()
-  observeEvent(input$run_button, {
-    showNotification(
-      "Script started",
-      type = "default",
-      duration = NULL,
-      closeButton = TRUE
-    )
-    
     # ----------------------------------- Functions ----------------------------
     # Make the tox score function
     calculate_acute_neurotox <- function(xx) {
@@ -997,16 +988,7 @@ function(input, output, session) {
                 file = paste0("Results_output_clustered_", current_date, ".csv"))
     }
 
-    t2 <- Sys.time()
-    time <- t2 - t1
-    print(time)
-    showNotification(
-      "Script finished",
-      type = "default",
-      duration = NULL,
-      # Notification stays until clicked away
-      closeButton = TRUE
-    )
+  
     print("done")
-  })
+  }
 }
