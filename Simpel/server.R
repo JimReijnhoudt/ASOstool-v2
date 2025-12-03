@@ -322,25 +322,25 @@ function(input, output, session) {
       unique() %>%
       split(.,.$length)
     
-    uni_tar1 = lapply(uni_tar, function(X){
-      dict0 = PDict(X$name, max.mismatch = 0)
-      dict1 = PDict(X$name, max.mismatch = 1)
-      
-      #perfect match count
-      pm = vwhichPDict(
-        pdict = dict0, subject = HS,
-        max.mismatch = 0, min.mismatch=0)
-      X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
-      
-      #single mismatch count, without indels
-      mm1 = vwhichPDict(
-        pdict = dict1, subject = HS,
-        max.mismatch = 1, min.mismatch=1)
-      X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-                                 (X))
-      X
-    }) %>%
-      bind_rows()
+    # uni_tar1 = lapply(uni_tar, function(X){
+    #   dict0 = PDict(X$name, max.mismatch = 0)
+    #   dict1 = PDict(X$name, max.mismatch = 1)
+    #   
+    #   #perfect match count
+    #   pm = vwhichPDict(
+    #     pdict = dict0, subject = HS,
+    #     max.mismatch = 0, min.mismatch=0)
+    #   X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
+    #   
+    #   #single mismatch count, without indels
+    #   mm1 = vwhichPDict(
+    #     pdict = dict1, subject = HS,
+    #     max.mismatch = 1, min.mismatch=1)
+    #   X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
+    #                              (X))
+    #   X
+    # }) %>%
+    #   bind_rows()
 
     # ----------------------------------- milestone 10 -------------------------
     print("milestone10.2")
@@ -362,9 +362,8 @@ function(input, output, session) {
         res$length <- .y
         res
       })) %>%
-      pull(results)
-  
-    print(summary_server)
+      pull(results) %>%
+      bind_rows()
     
     uni_tar <- summary_server %>%
       group_by(name, length) %>%
@@ -1005,5 +1004,6 @@ function(input, output, session) {
   
     print("done")
   
-)}
+    }
+  })
 }

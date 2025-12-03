@@ -179,8 +179,6 @@ all_offt <- function(sequence, mismatches_allowed) {
           ) %>%
           slice(1)
         
-        print(chosen_row)
-        
         subject_seq <- chosen_row$subject_seq
         query_seq   <- chosen_row$query_seq
         
