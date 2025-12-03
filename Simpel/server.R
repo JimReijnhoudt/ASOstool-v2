@@ -172,11 +172,11 @@ function(input, output, session) {
     
     # path = getwd()
     
-    #path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
-    #txdb_hsa <- loadDb("txdb_hsa_biomart.db")
-    
     # --- Harrys data location with script ---
     txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+    
+    # # --- Jims data location with docker --- 
+    # txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
     # ----------------------------------- milestone 1 --------------------------
     print("milestone1")
@@ -964,7 +964,7 @@ function(input, output, session) {
           updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
         }
         
-      })
+      )
     }
     
     # Table one handler call

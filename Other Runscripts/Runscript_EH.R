@@ -48,6 +48,9 @@ path = "/mnt/data/Jeremy/txdb/"
 # Load the TxDb object
 txdb_hsa <- loadDb(paste0("txdb_hsa_biomart.db"))
 
+# Docker
+# txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+
 # Extract the genes *
 gdb_hsa <- genes(txdb_hsa)
 
