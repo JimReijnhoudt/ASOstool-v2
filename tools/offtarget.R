@@ -281,52 +281,36 @@ acc_snippet <- function(
     full_snippet,
     total_length = 80
 ) {
-  # 1. Targetlengte
+
   target_length <- end_target - begin_target + 1
-  if (target_length > total_length) {
-    stop("Target is langer dan snippet.")
-  }
-  
-  # 2. Flanks
+
   flank_total <- total_length - target_length
   flank_left  <- floor(flank_total / 2)
   flank_right <- ceiling(flank_total / 2)
-  
-  # 3. Eerste snippet (extern)
+
   snippet_start <- begin_target - flank_left
   snippet_end   <- end_target   + flank_right
-  
-  # 4. Linkergrens
+
   if (snippet_start < begin_snippet) {
     shift <- begin_snippet - snippet_start
     snippet_start <- begin_snippet
     snippet_end   <- snippet_end + shift
   }
-  
-  # 5. Rechtergrens
+
   if (snippet_end > end_snippet) {
     shift <- snippet_end - end_snippet
     snippet_end   <- end_snippet
     snippet_start <- snippet_start - shift
   }
-  
-  # 6. Sanity check lengte
-  if ((snippet_end - snippet_start + 1) != total_length) {
-    stop("Kon geen snippet van 80 nt maken binnen grenzen.")
-  }
-  
-  # 7. Targetposities intern (1–80)
+
   target_start_internal <- begin_target - snippet_start + 1
   target_end_internal   <- end_target   - snippet_start + 1
-  
-  # 8. Substring indices in full_snippet
+
   start_i <- snippet_start - begin_snippet + 1
   end_i   <- snippet_end   - begin_snippet + 1
-  
-  # 9. Extract sequentie
+
   snippet_seq <- substr(full_snippet, start_i, end_i)
-  
-  # 10. Return alles
+
   return(
     list(
       snippet_seq             = snippet_seq,
