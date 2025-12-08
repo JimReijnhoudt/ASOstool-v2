@@ -8,6 +8,7 @@ This section is for end-users who only need to run the Shiny application. No RSt
 
 #### 1. Build the Docker image 
 
+test
 ```docker build -t asostoolv2 .```
 
 #### 2. Start the container
