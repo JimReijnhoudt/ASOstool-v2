@@ -15,14 +15,14 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   condition_col <- character()
   url_col <- character()
   
-      for (cond in conditions) {
-        url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".txt")
-        
-        mismatch_col <- c(mismatch_col, mismatch_conditions)
-        strand_col <- c(strand_col, strands)
-        condition_col <- c(condition_col, cond)
-        url_col <- c(url_col, url)
-        }
+  for (cond in conditions) {
+    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".txt")
+    
+    mismatch_col <- c(mismatch_col, mismatch_conditions)
+    strand_col <- c(strand_col, strands)
+    condition_col <- c(condition_col, cond)
+    url_col <- c(url_col, url)
+  }
   
   # save url, mismatch and condition to a dataframe
   urls_df <- data.frame(
@@ -48,6 +48,13 @@ filter_data <- function(data, criterion) {
   sub_col <- character()
   query_col <- character()
   
+  start_target_col <- integer()
+  end_target_col <- integer()
+  snippet_col <- character()
+  snippet_start_col <- integer()
+  snippet_end_col <- integer()
+  
+  
   for (line in lines) {
     if (any(str_starts(line, start))) {
       aantal_equal <- str_count(line, "=")
@@ -72,6 +79,12 @@ filter_data <- function(data, criterion) {
         
         sub_col <- c(sub_col, subs)
         query_col <- c(query_col, quers)
+        
+        start_target_col <- c(start_target_col, as.integer(parts[3]))
+        end_target_col <- c(end_target_col, as.integer(parts[4]))
+        snippet_col <- c(snippet_col, as.character(parts[5]))
+        snippet_start_col <- c(snippet_start_col, as.integer(parts[6]))
+        snippet_end_col <- c(snippet_end_col, as.integer(parts[7]))
       }
     }
   }
@@ -84,6 +97,11 @@ filter_data <- function(data, criterion) {
     insertions = ins_col,
     subject_seq = sub_col,
     query_seq = query_col,
+    start_target = start_target_col,
+    end_target = end_target_col,
+    snippet = snippet_col,
+    snippet_start = snippet_start_col,
+    snippet_end = snippet_end_col,
     stringsAsFactors = FALSE
   )
   return(df)
@@ -128,9 +146,14 @@ all_offt <- function(sequence, mismatches_allowed) {
     insertions = integer(),
     subject_seq = character(),
     query_seq = character(),
+    start_target = integer(),
+    end_target = integer(),
+    snippet = character(),
+    snippet_start = integer(),
+    snippet_end = integer(),
     stringsAsFactors = FALSE
   )
-
+  
   
   # Loop over each URL and retrieve the data from it
   for (i in 1:nrow(urls_df)) {
@@ -178,6 +201,12 @@ all_offt <- function(sequence, mismatches_allowed) {
         subject_seq <- chosen_row$subject_seq
         query_seq   <- chosen_row$query_seq
         
+        start_target <- chosen_row$start_target
+        end_target <- chosen_row$end_target
+        snippet <- chosen_row$snippet
+        snippet_start <- chosen_row$snippet_start
+        snippet_end <- chosen_row$snippet_end
+        
         source_sheet <- paste0(str_replace_all(condition, "\\W+", "_"), "_", str_replace_all(mismatch_condition, "\\W+", "_"), "_mismatch")
         
         summary_row <- data.frame(
@@ -189,6 +218,11 @@ all_offt <- function(sequence, mismatches_allowed) {
           'Total Insertions' = min_insertions,
           'Subject sequence' = subject_seq,
           'Query sequence' = query_seq,
+          'start_target' = start_target,
+          'end_target' = end_target,
+          'snippet' = snippet,
+          'snippet_start' = snippet_start,
+          'snippet_end' = snippet_end,
           stringsAsFactors = FALSE
         )
         
@@ -208,6 +242,11 @@ all_offt <- function(sequence, mismatches_allowed) {
         insertions = NULL,
         subject_seq = NULL,
         query_seq = NULL,
+        start_target = NULL,
+        end_target = NULL,
+        snippet = NULL,
+        snippet_start = NULL,
+        snippet_end = NULL,
         stringsAsFactors = FALSE
       )
     }
@@ -220,6 +259,7 @@ all_offt <- function(sequence, mismatches_allowed) {
   
   # Define new column names for the summary data frame
   new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions", "Subject sequence", "Query sequence",
+                    "start_target", "end_target", "snippet", "snippet_start", "snippet_end",
                     "Gene description", "Brain RNA - amygdala [nTPM]",
                     "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
                     "Brain RNA - cerebral cortex [nTPM]", "Brain RNA - choroid plexus [nTPM]",
@@ -233,6 +273,71 @@ all_offt <- function(sequence, mismatches_allowed) {
   return(summary_df)
 }
 
+acc_snippet <- function(
+    begin_target,
+    end_target,
+    begin_snippet,
+    end_snippet,
+    full_snippet,
+    total_length = 80
+) {
+  # 1. Targetlengte
+  target_length <- end_target - begin_target + 1
+  if (target_length > total_length) {
+    stop("Target is langer dan snippet.")
+  }
+  
+  # 2. Flanks
+  flank_total <- total_length - target_length
+  flank_left  <- floor(flank_total / 2)
+  flank_right <- ceiling(flank_total / 2)
+  
+  # 3. Eerste snippet (extern)
+  snippet_start <- begin_target - flank_left
+  snippet_end   <- end_target   + flank_right
+  
+  # 4. Linkergrens
+  if (snippet_start < begin_snippet) {
+    shift <- begin_snippet - snippet_start
+    snippet_start <- begin_snippet
+    snippet_end   <- snippet_end + shift
+  }
+  
+  # 5. Rechtergrens
+  if (snippet_end > end_snippet) {
+    shift <- snippet_end - end_snippet
+    snippet_end   <- end_snippet
+    snippet_start <- snippet_start - shift
+  }
+  
+  # 6. Sanity check lengte
+  if ((snippet_end - snippet_start + 1) != total_length) {
+    stop("Kon geen snippet van 80 nt maken binnen grenzen.")
+  }
+  
+  # 7. Targetposities intern (1–80)
+  target_start_internal <- begin_target - snippet_start + 1
+  target_end_internal   <- end_target   - snippet_start + 1
+  
+  # 8. Substring indices in full_snippet
+  start_i <- snippet_start - begin_snippet + 1
+  end_i   <- snippet_end   - begin_snippet + 1
+  
+  # 9. Extract sequentie
+  snippet_seq <- substr(full_snippet, start_i, end_i)
+  
+  # 10. Return alles
+  return(
+    list(
+      snippet_seq             = snippet_seq,
+      snippet_start_external  = snippet_start,
+      snippet_end_external    = snippet_end,
+      snippet_length          = total_length,
+      target_start_internal   = target_start_internal,
+      target_end_internal     = target_end_internal
+    )
+  )
+}
 
 # # ---------- Run ----------
 # dataframes <- all_offt("TTTTTGCCATCCTGGGCGCT", 2)
