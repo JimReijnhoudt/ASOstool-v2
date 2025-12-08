@@ -33,7 +33,7 @@ sidebarLayout(
         "Oligo length:",
         min = 0,
         max = 50,
-        value = c(14, 20)
+        value = c(18, 20)
       ),
       fluidRow(
         column(
@@ -49,7 +49,7 @@ sidebarLayout(
                 choices = c("==", "!=", "<", ">", "<=", ">=")
               )
             ),
-            column(4, numericInput("numeric_input_a", "", value = 1)),
+            column(4, numericInput("numeric_input_a", "", value = 10)),
             checkboxInput("perfect_input", "Enable", value = TRUE),
           ),
           
@@ -64,7 +64,7 @@ sidebarLayout(
                 choices = c("==", "!=", "<", ">", "<=", ">=")
               )
             ),
-            column(4, numericInput("numeric_input_b", "", value = 50)),
+            column(4, numericInput("numeric_input_b", "", value = 100)),
             checkboxInput("mismatch_input", "Enable", value = TRUE),
           ),
           
@@ -79,7 +79,7 @@ sidebarLayout(
                 choices = c("==", "!=", "<", ">", "<=", ">=")
               )
             ),
-            column(4, numericInput("numeric_input_c", "", value = 1E-6)),
+            column(4, numericInput("numeric_input_c", "", value = 0.1)),
             checkboxInput("Accessibility_input", "Enable", value =
                             TRUE),
           ),
