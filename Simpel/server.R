@@ -121,6 +121,16 @@ function(input, output, session) {
                        intern = TRUE)
       as.numeric(regmatches(sys_cmd, regexpr("-?\\d+\\.\\d+", sys_cmd)))
     }
+
+    # --- Jims data location with docker --- 
+    txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+    
+    # --- Harrys data location with script ---
+    #txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+    
+    # ----------------------------------- milestone 1 --------------------------
+    print("milestone1")
+
     
     RNAselffold_R = function (seqs) {
       output = system('RNAfold --noPS',
