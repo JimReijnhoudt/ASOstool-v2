@@ -16,22 +16,115 @@ ui <- fluidPage(
         transform: translate(-50%, -50%);
         z-index: 9999;
       }
+      
+      .navbar-brand {
+        display: flex !important;
+        align-items: center !important;
+        height: 60px !important;          
+      }
     "
     )
   )),
+  tags$nav(
+    class = "navbar navbar-default",
+    style = "margin-bottom: 5px;",
+    tags$div(class = "container-fluid", tags$div(
+      class = "navbar-header",
+      tags$span(class = "navbar-brand", style = "font-weight: bold; font-size: 30px;", HTML("ER<u>ASO</u>R"))
+    ))
+  ),
   sidebarLayout(
     sidebarPanel(fluidRow(
       column(
         12,
-        textInput("ensemble_id_input", "Enter Ensemble id:", value = "ENSG00000100284"),
-        checkboxInput("polymorphism_input", "Polymorphism analysis", value =
-                        TRUE),
-        checkboxInput("Conserved_input", "Conserved & Orthology", value =
-                        TRUE),
-        checkboxInput("linux_input", "Running on Linux-OS", value = TRUE),
+        textInput(
+          "ensemble_id_input",
+          label = tagList(
+            "Enter Ensemble id:  ",
+            tags$span(
+              tags$img(
+                src = "questionmark.png",
+                height = "20px",
+                style = "margin-bottom: 3px;"
+              ),
+              title = "Test on hover",
+              `data-placement` = "right",
+              `data-toggle` = "tooltip",
+              style = "cursor: pointer;"
+            )
+          ),
+          value = "ENSG00000100284"
+        ),
+        checkboxInput(
+          "polymorphism_input",
+          label = tagList(
+            "Polymorphism analysis ",
+            tags$span(
+              tags$img(
+                src = "questionmark.png",
+                height = "20px",
+                style = "margin-bottom: 3px;"
+              ),
+              title = "Test on hover",
+              `data-placement` = "right",
+              `data-toggle` = "tooltip",
+              style = "cursor: pointer;"
+            )
+          ),
+          value = TRUE
+        ),
+        checkboxInput(
+          "Conserved_input",
+          label = tagList(
+            "Conserved & Orthology ",
+            tags$span(
+              tags$img(
+                src = "questionmark.png",
+                height = "20px",
+                style = "margin-bottom: 3px;"
+              ),
+              title = "Test on hover",
+              `data-placement` = "right",
+              `data-toggle` = "tooltip",
+              style = "cursor: pointer;"
+            )
+          ),
+          value = TRUE
+        ),
+        checkboxInput(
+          "linux_input",
+          label = tagList(
+            "Running on Linux-OS ",
+            tags$span(
+              tags$img(
+                src = "questionmark.png",
+                height = "20px",
+                style = "margin-bottom: 3px;"
+              ),
+              title = "Test on hover",
+              `data-placement` = "right",
+              `data-toggle` = "tooltip",
+              style = "cursor: pointer;"
+            )
+          ),
+          value = TRUE
+        ),
         sliderInput(
           "oligo_length_range",
-          "Oligo length:",
+          label = tagList(
+            "Oligo length: ",
+            tags$span(
+              tags$img(
+                src = "questionmark.png",
+                height = "20px",
+                style = "margin-bottom: 3px;"
+              ),
+              title = "Test on hover",
+              `data-placement` = "right",
+              `data-toggle` = "tooltip",
+              style = "cursor: pointer;"
+            )
+          ),
           min = 0,
           max = 50,
           value = c(14, 20)
@@ -39,7 +132,21 @@ ui <- fluidPage(
         fluidRow(
           column(
             12,
-            h5(HTML("<b>Amount of perfect matches</b>")),
+            
+            h5(tagList(
+              HTML("<b>Amount of perfect matches</b> "),
+              tags$span(
+                tags$img(
+                  src = "questionmark.png",
+                  height = "20px",
+                  style = "margin-bottom: 3px;"
+                ),
+                title = "Test on hover",
+                `data-toggle` = "tooltip",
+                `data-placement` = "right",
+                style = "cursor: pointer;"
+              )
+            )),
             fluidRow(
               column(
                 4,
@@ -54,7 +161,20 @@ ui <- fluidPage(
               checkboxInput("perfect_input", "Enable", value = TRUE),
             ),
             
-            h5(HTML("<b>Amount of 1 mismatch</b>")),
+            h5(tagList(
+              HTML("<b>Amount of 1 mismatch </b>"),
+              tags$span(
+                tags$img(
+                  src = "questionmark.png",
+                  height = "20px",
+                  style = "margin-bottom: 3px;"
+                ),
+                title = "Test on hover",
+                `data-toggle` = "tooltip",
+                `data-placement` = "right",
+                style = "cursor: pointer;"
+              )
+            )),
             fluidRow(
               column(
                 4,
@@ -69,7 +189,20 @@ ui <- fluidPage(
               checkboxInput("mismatch_input", "Enable", value = TRUE),
             ),
             
-            h5(HTML("<b>Accessibility</b>")),
+            h5(tagList(
+              HTML("<b>Accessibility </b>"),
+              tags$span(
+                tags$img(
+                  src = "questionmark.png",
+                  height = "20px",
+                  style = "margin-bottom: 3px;"
+                ),
+                title = "Test on hover",
+                `data-toggle` = "tooltip",
+                `data-placement` = "right",
+                style = "cursor: pointer;"
+              )
+            )),
             fluidRow(
               column(
                 4,
@@ -85,7 +218,20 @@ ui <- fluidPage(
                               TRUE),
             ),
             
-            h5(HTML("<b>Polymorphism frequence</b>")),
+            h5(tagList(
+              HTML("<b>Polymorphism frequence </b>"),
+              tags$span(
+                tags$img(
+                  src = "questionmark.png",
+                  height = "20px",
+                  style = "margin-bottom: 3px;"
+                ),
+                title = "Test on hover",
+                `data-toggle` = "tooltip",
+                `data-placement` = "right",
+                style = "cursor: pointer;"
+              )
+            )),
             fluidRow(
               column(
                 4,
@@ -100,7 +246,20 @@ ui <- fluidPage(
               checkboxInput("Poly_input", "Enable", value = TRUE),
             ),
             
-            h5(HTML("<b>Toxicity score</b>")),
+            h5(tagList(
+              HTML("<b>Toxicity score </b>"),
+              tags$span(
+                tags$img(
+                  src = "questionmark.png",
+                  height = "20px",
+                  style = "margin-bottom: 3px;"
+                ),
+                title = "Test on hover",
+                `data-toggle` = "tooltip",
+                `data-placement` = "right",
+                style = "cursor: pointer;"
+              )
+            )),
             fluidRow(
               column(
                 4,
@@ -121,28 +280,81 @@ ui <- fluidPage(
     ), width = 3),
     
     # Updated main panel for RNase H script.
-    mainPanel(tabsetPanel(
-      id = "tabs_main",
-      tabPanel(
-        "Sequence results",
-        downloadButton("Download_input", "Download Results", style = "margin-top: 20px"),
-        hr(),
-        DT::dataTableOutput('results1'),
-        DT::dataTableOutput('results2')
-      ),
-      
-      tabPanel(
-        "RNase H cleavage results",
-        h3(textOutput("rnaseh_title")),
-        div(uiOutput("rnaseh_info"), style = "margin-bottom: 15px;"),
-        hr(),
+    mainPanel(
+      tabsetPanel(
+        id = "tabs_main",
+        tabPanel(
+          "Sequence results",
+          downloadButton("Download_input", "Download Results", style = "margin-top: 20px"),
+          hr(),
+          DT::dataTableOutput('results1'),
+          DT::dataTableOutput('results2')
+        ),
         
-        fluidRow(column(
-          6,
-          numericInput(
-            "mod_5prime",
+        tabPanel(
+          "RNase H cleavage results",
+          h3(textOutput("rnaseh_title")),
+          div(uiOutput("rnaseh_info"), style = "margin-bottom: 15px;"),
+          hr(),
+          
+          fluidRow(column(
+            6,
+            numericInput(
+              "mod_5prime",
+              label = tagList(
+                "Amount of modified nucleotides at the 5' end  ",
+                tags$span(
+                  tags$img(src = "questionmark.png", height = "20px"),
+                  title = "Test on hover",
+                  `data-toggle` = "tooltip",
+                  style = "cursor: pointer;"
+                )
+              ),
+              value = 0,
+              min = 0,
+              max = 10,
+              width = "60%"
+            ),
+          ), column(
+            6,
+            numericInput(
+              "mod_3prime",
+              label = tagList(
+                "Amount of modified nucleotides at the 3' end  ",
+                tags$span(
+                  tags$img(src = "questionmark.png", height = "20px"),
+                  title = "Test on hover",
+                  `data-toggle` = "tooltip",
+                  style = "cursor: pointer;"
+                )
+              ),
+              value = 0,
+              min = 0,
+              max = 10,
+              width = "60%"
+            )
+          )),
+          actionButton("add_mods", "Apply end modifications", class = "btn-primary"),
+          hr(),
+          
+          downloadButton("download_rnaseh", "Download results", style = "margin-bottom: 15px;"),
+          dataTableOutput("rnaseh_results"),
+          hr(),
+          
+          h3("Visualised cleavage site: "),
+          uiOutput("cleavage_visual"),
+        ),
+        
+        tabPanel(
+          "Off target results",
+          h3(textOutput("offtarget_title")),
+          textOutput("numb_offtargets"),
+          textOutput("aso_seq"),
+          hr(),
+          selectInput(
+            "user_mismatch",
             label = tagList(
-              "Amount of modified nucleotides at the 5' end  ",
+              "Select number of mismatches allowed  ",
               tags$span(
                 tags$img(src = "questionmark.png", height = "20px"),
                 title = "Test on hover",
@@ -150,72 +362,21 @@ ui <- fluidPage(
                 style = "cursor: pointer;"
               )
             ),
-            value = 0,
-            min = 0,
-            max = 10,
-            width = "60%"
-          ),
-        ), column(
-          6,
-          numericInput(
-            "mod_3prime",
-            label = tagList(
-              "Amount of modified nucleotides at the 3' end  ",
-              tags$span(
-                tags$img(src = "questionmark.png", height = "20px"),
-                title = "Test on hover",
-                `data-toggle` = "tooltip",
-                style = "cursor: pointer;"
-              )
-            ),
-            value = 0,
-            min = 0,
-            max = 10,
-            width = "60%"
-          )
-        )),
-        actionButton("add_mods", "Apply end modifications", class = "btn-primary"),
-        hr(),
-        
-        downloadButton("download_rnaseh", "Download results", style = "margin-bottom: 15px;"),
-        dataTableOutput("rnaseh_results"),
-        hr(),
-        
-        h3("Visualised cleavage site: "),
-        uiOutput("cleavage_visual"),
-      ),
-      
-      tabPanel(
-        "Off target results",
-        h3(textOutput("offtarget_title")),
-        textOutput("numb_offtargets"),
-        textOutput("aso_seq"),
-        hr(),
-        selectInput(
-          "user_mismatch",
-          label = tagList(
-            "Select number of mismatches allowed  ",
-            tags$span(
-              tags$img(src = "questionmark.png", height = "20px"),
-              title = "Test on hover",
-              `data-toggle` = "tooltip",
-              style = "cursor: pointer;"
+            choices = list(
+              "0" = 0,
+              "1" = 1,
+              "2" = 2,
+              "3" = 3
             )
           ),
-          choices = list(
-            "0" = 0,
-            "1" = 1,
-            "2" = 2,
-            "3" = 3
-          )
-        ),
-        actionButton("apply_mismatch", "Apply", class = "btn-primary"),
-        hr(),
-        downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
-        DTOutput("offtarget_results")
-      )
-    ),
-    width = 9)
+          actionButton("apply_mismatch", "Apply", class = "btn-primary"),
+          hr(),
+          downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
+          DTOutput("offtarget_results")
+        )
+      ),
+      width = 9
+    )
   ),
   tags$script(
     HTML(
