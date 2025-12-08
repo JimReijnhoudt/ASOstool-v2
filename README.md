@@ -25,7 +25,6 @@ On Windows (Powershell):
 ```
 docker run -d `
   -p 3838:3838 `
-  -v ${PWD}:/home/rstudio/ASOstool-v2 `
   -v ${PWD}:/srv/shiny-server/ASOstool-v2 `
   asostoolv2
 ```
@@ -108,6 +107,8 @@ Credentials:
 
 -   Username: rstudio
 -   Password: rstudio
+
+Select the ASOstool-v2 directory to start a new project in Rstudio.
 
 #### 4. Set up SSH keys (first time only)
 
