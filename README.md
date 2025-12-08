@@ -61,6 +61,9 @@ docker rm <container_id>
 ### 💻 Developer setup (RStudio + Git + SSH)
 
 This section is for developers contributing to the project.
+Before starting build the docker container:
+
+```docker build -t asostoolv2 .```
 
 #### 1. Create a persistent volume for RStudio home
 
@@ -97,7 +100,7 @@ docker run -d `
   asostoolv2
 ```
 
-#### 3. Log into RStudio
+#### 3. Log into RStudio and create project
 
 Open:
 
@@ -108,7 +111,7 @@ Credentials:
 -   Username: rstudio
 -   Password: rstudio
 
-Select the ASOstool-v2 directory to start a new project in Rstudio.
+Create a new project in R-studio by directory > Select ASOstool-v2 directory.
 
 #### 4. Set up SSH keys (first time only)
 
