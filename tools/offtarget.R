@@ -39,7 +39,6 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
 # Function to filter data based on the number of equal signs
 filter_data <- function(data, criterion) {
   data_results <- data$results
-  print(data_results)
   
   df_filtered <- data_results[
     grepl("^(NM_|chr|NR_)", data_results$name) &
@@ -138,6 +137,14 @@ all_offt <- function(sequence, mismatches_allowed) {
     
     # Extract all unique protein names into a vector
     protein_hits <- str_match(filtered_data_df$line, "NM_\\d+\\.\\d+\\|([^;]+)")[,2]
+    
+    filtered_data_df <- filter_data(df_json, mismatches_allowed)
+    all_df <- bind_rows(all_df, filtered_data_df)
+    
+    if (nrow(filtered_data_df) == 0) {
+      next
+    }
+    
     protein_hits <- unique(na.omit(protein_hits))
     
     # Loop over all unique proteins and fill the summary_df data frame with the corresponding values
@@ -146,6 +153,11 @@ all_offt <- function(sequence, mismatches_allowed) {
       if (!is.null(expression_data) && nrow(expression_data) > 0) {
         
         protein_row <- filtered_data_df %>% filter(str_detect(line, protein_hit))
+        
+        if (nrow(protein_row) == 0) {
+          next
+        }
+        
         max_equal <- max(protein_row$equal_signs, na.rm = TRUE)
         min_mismatch <- min(protein_row$mismatches, na.rm = TRUE)
         
@@ -160,6 +172,10 @@ all_offt <- function(sequence, mismatches_allowed) {
             insertions == min_insertions
           ) %>%
           slice(1)
+        
+        if (nrow(chosen_row) == 0) {
+          next
+        }
         
         subject_seq <- chosen_row$subject_seq
         query_seq   <- chosen_row$query_seq
@@ -190,6 +206,11 @@ all_offt <- function(sequence, mismatches_allowed) {
         )
         
         summary_row <- bind_cols(summary_row, expression_data[1, 2:ncol(expression_data)])
+        
+        if (ncol(expression_data) < 2) {
+          next
+        }
+        
         summary_df <- bind_rows(summary_df, summary_row)
       }
       else {
@@ -287,7 +308,8 @@ acc_snippet <- function(
 }
 
 # # ---------- Run ----------
-# dataframes <- all_offt("TTTTTGCCATCCTGGGCGCT", 2)
+# options(error = recover)
+# dataframes <- all_offt("GCTTTTTGCCATCCTGGGCG", 3)
 # urls <- dataframes$urls
 # summary_df <- dataframes$summary
 # df <- dataframes$df
