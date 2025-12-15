@@ -1,5 +1,6 @@
 library(tidyverse)
 library(httr)
+library(jsonlite)
 # library(readr)
 # library(stringr)
 # library("xlsx")
@@ -16,7 +17,7 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   url_col <- character()
   
   for (cond in conditions) {
-    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".txt")
+    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".json")
     
     mismatch_col <- c(mismatch_col, mismatch_conditions)
     strand_col <- c(strand_col, strands)
@@ -37,73 +38,33 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
 
 # Function to filter data based on the number of equal signs
 filter_data <- function(data, criterion) {
-  start <- c('NM_', 'chr', 'NR_')
-  lines <- str_split(data, "\n")[[1]]
+  data_results <- data$results
+  print(data_results)
   
-  line_col <- character()
-  equal_col <- integer()
-  mismatch_col <- integer()
-  ins_col <- integer()
-  del_col <- integer()
-  sub_col <- character()
-  query_col <- character()
+  df_filtered <- data_results[
+    grepl("^(NM_|chr|NR_)", data_results$name) &
+      str_count(data_results$edit, "=") >= criterion, ]
   
-  start_target_col <- integer()
-  end_target_col <- integer()
-  snippet_col <- character()
-  snippet_start_col <- integer()
-  snippet_end_col <- integer()
+  if (nrow(df_filtered) == 0) return(data.frame())
   
-  
-  for (line in lines) {
-    if (any(str_starts(line, start))) {
-      aantal_equal <- str_count(line, "=")
-      if (aantal_equal >= criterion){
-        line_col <- c(line_col, line)
-        
-        equal_col <- c(equal_col, aantal_equal)
-        
-        parts <- strsplit(line, "\t")[[1]]
-        mm <- as.integer(parts[13])
-        # mm <- sum(as.integer(tail(parts, 2)))
-        mismatch_col <- c(mismatch_col, mm)
-        
-        del <- as.integer(parts[14])
-        ins <- as.integer(parts[15])
-        
-        del_col <- c(del_col, del)
-        ins_col <- c(ins_col, ins)
-        
-        subs <- as.character(parts[9])
-        quers <- as.character(parts[8])
-        
-        sub_col <- c(sub_col, subs)
-        query_col <- c(query_col, quers)
-        
-        start_target_col <- c(start_target_col, as.integer(parts[3]))
-        end_target_col <- c(end_target_col, as.integer(parts[4]))
-        snippet_col <- c(snippet_col, as.character(parts[5]))
-        snippet_start_col <- c(snippet_start_col, as.integer(parts[6]))
-        snippet_end_col <- c(snippet_end_col, as.integer(parts[7]))
-      }
-    }
-  }
+  n <- nrow(df_filtered)
   
   df <- data.frame(
-    line = line_col,
-    equal_signs = equal_col,
-    mismatches = mismatch_col,
-    deletions = del_col, 
-    insertions = ins_col,
-    subject_seq = sub_col,
-    query_seq = query_col,
-    start_target = start_target_col,
-    end_target = end_target_col,
-    snippet = snippet_col,
-    snippet_start = snippet_start_col,
-    snippet_end = snippet_end_col,
+    line = df_filtered$name,
+    equal_signs = str_count(df_filtered$edit, "="),
+    mismatches = df_filtered$mis,
+    deletions = df_filtered$del,
+    insertions = df_filtered$ins,
+    subject_seq = df_filtered$sbjct,
+    query_seq = df_filtered$query,
+    start_target = df_filtered$position,
+    end_target = df_filtered$position_end,
+    snippet = df_filtered$snippet,
+    snippet_start = df_filtered$snippet_pos,
+    snippet_end = df_filtered$snippet_end,
     stringsAsFactors = FALSE
   )
+  
   return(df)
 }
 
@@ -165,8 +126,10 @@ all_offt <- function(sequence, mismatches_allowed) {
     response <- GET(url)
     
     if (status_code(response) == 200) {
-      text_data <- content(response, "text", encoding = "UTF-8")
-      filtered_data_df <- filter_data(text_data, mismatches_allowed)
+      df_json <- fromJSON(
+        content(response, as = "text", encoding = "UTF-8"),
+        flatten = TRUE)
+      filtered_data_df <- filter_data(df_json, mismatches_allowed)
       all_df <- bind_rows(all_df, filtered_data_df)
     } else {
       print("Failed to fetch data.")

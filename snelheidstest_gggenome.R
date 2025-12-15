@@ -81,7 +81,7 @@ filter_data <- function(data, criterion) {
 }
 
 
-all <- function(sequence) {
+all_offt <- function(sequence) {
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(sequence)
   mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
@@ -126,16 +126,18 @@ all <- function(sequence) {
   return(all_df)
 }
 
-sequences <- readLines("sequenties.txt")
+dataframe_test_txt <- all_offt("TTTTTGCCATCCTGGGCGCT")
 
-run_all_on_sequence <- function(seq) {
-  df <- all(seq)
-  tibble(
-    sequentie = seq,
-    hits = nrow(df)
-  )
-}
-
-results <- sequences %>%
-  lapply(run_all_on_sequence) %>%
-  bind_rows()
+# sequences <- readLines("sequenties.txt")
+# 
+# run_all_on_sequence <- function(seq) {
+#   df <- all(seq)
+#   tibble(
+#     sequentie = seq,
+#     hits = nrow(df)
+#   )
+# }
+# 
+# results <- sequences %>%
+#   lapply(run_all_on_sequence) %>%
+#   bind_rows()

@@ -236,10 +236,10 @@ function(input, output, session) {
     
     # Define the marts for mmusculus and hsapiens
     martHS = useEnsembl(biomart="ensembl",
-                        dataset="hsapiens_gene_ensembl")
+                        dataset="hsapiens_gene_ensembl", version=105)
     if (input$Conserved_input == TRUE) {
       martMM = useEnsembl(biomart="ensembl",
-                          dataset="mmusculus_gene_ensembl")
+                          dataset="mmusculus_gene_ensembl", version=105)
       
       # Get the orthologous Ensembl gene for the provided human Ensembl ID
       ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
