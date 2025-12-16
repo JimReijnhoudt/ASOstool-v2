@@ -637,7 +637,6 @@ function(input, output, session) {
       current_offtargets <- reactiveVal(NULL)
       cached_results <- reactiveVal(list())
       
-      # Centrale functie voor accessibility (1 plek!)
       compute_offtarget_accessibility <- function(df) {
         if (input$linux_input != TRUE) return(df)
         
@@ -686,12 +685,10 @@ function(input, output, session) {
         current_mismatch(mm)
         cache <- cached_results()
         
-        # --- CACHE HIT ---
         if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
           subset_df <- cache[[seq]][[key]]
           
         } else {
-          # --- CACHE MISS ---
           if (mm %in% c(0, 1, 2)) {
             subset_df <- summary_server %>%
               filter(toupper(name) == seq, `Total Mismatches` <= mm)
@@ -706,10 +703,8 @@ function(input, output, session) {
             subset_df <- new_res
           }
           
-          # --- Linux accessibility berekening HIER (1 plek) ---
           subset_df <- compute_offtarget_accessibility(subset_df)
           
-          # --- Cache opslaan ---
           if (is.null(cache[[seq]])) cache[[seq]] <- list()
           cache[[seq]][[key]] <- subset_df
           cached_results(cache)
