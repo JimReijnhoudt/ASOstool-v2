@@ -17,6 +17,8 @@ library(openxlsx)
 
 source("../tools/GGGenome_functions.R")
 source("../tools/RNaseH_script.R")
+source("../tools/Off_target_tissue.R")
+source("../tools/Off_target_OMIM_Api.R")
 
 # ----------------------------------- working directory ------------------------
 working_dir = getwd()
@@ -122,14 +124,8 @@ function(input, output, session) {
       as.numeric(regmatches(sys_cmd, regexpr("-?\\d+\\.\\d+", sys_cmd)))
     }
 
-    # --- Jims data location with docker --- 
-    txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
-    
-    # --- Harrys data location with script ---
-    #txdb_hsa <- loadDb("../Data/txdb_hsa.db")
-    
-    # ----------------------------------- milestone 1 --------------------------
-    print("milestone1")
+
+  
 
     
     RNAselffold_R = function (seqs) {
@@ -668,32 +664,7 @@ function(input, output, session) {
   print("temp milestone")
   target_region_select <- target_regions
   
-  if (input$perfect_input == TRUE) {
-    target_region_select <- filter_function(
-      target_region_select,
-      input$numeric_input_a,
-      "gene_hits_pm",
-      input$dropdown_input_a
-    )
-  }
-  if (input$mismatch_input == TRUE) {
-    target_region_select <- filter_function(
-      target_region_select,
-      input$numeric_input_b,
-      "gene_hits_1mm",
-      input$dropdown_input_b
-    )
-  }
-  if (input$linux_input == TRUE) {
-    if (input$Accessibility_input == TRUE) {
-      target_region_select <- filter_function(
-        target_region_select,
-        input$numeric_input_c,
-        "accessibility",
-        input$dropdown_input_c
-      )
-    }
-  }
+
   if (input$polymorphism_input == TRUE) {
     if (input$Poly_input == TRUE) {
       target_region_select <- filter_function(
@@ -704,14 +675,7 @@ function(input, output, session) {
       )
     }
   }
-  if (input$tox_input == TRUE) {
-    target_region_select <- filter_function(
-      target_region_select,
-      input$numeric_input_e,
-      "tox_score",
-      input$dropdown_input_e
-    )
-  }
+
   if (input$Conserved_input == TRUE) {
     target_region_select <- filter(target_region_select, conserved_in_mmusculus == TRUE)
   }
@@ -737,57 +701,12 @@ function(input, output, session) {
   
   
   # Motif_results including motif count after filtering
-  motif_results_filtered <- target_annotation %>%
+  motif_results_filtered <- target_region_select %>%
     select(all_of(motif_results_cols))
-  
+ 
   # Target annotation with just the correlation score
-  target_annotation <- target_annotation %>%
+  target_region_select <- target_region_select %>%
     select(-all_of(motif_cols))
-
-  
-  # ----------------------------------- milestone 19 -------------------------
-  print("milestone19")
-  
-  # Get all unique starting positions in order
-  start_pos = sort(unique(target_region_select$start))
-  
-  num_data_points <- length(start_pos)
-  
-  # ----------------------------------- milestone 19.1 -----------------------
-  print("milestone19.1")
-  
-  # Set amount of clusters
-  if (num_data_points > 1) {
-    K <- min(10, num_data_points - 1)
-  } else {
-    # Handle the case when there are not enough data points
-    K <- 1
-  }
-  
-  # ----------------------------------- milestone 19.2 -----------------------
-  print("milestone19.2")
-  
-  # Cluster the selected regions
-  cluster_tab = tibble(
-    start = start_pos,
-    cluster = clara(
-      x = start_pos,
-      k = K,
-      metric = 'euclidean',
-      pamLike = T,
-      samples = 100
-    )$clustering
-  )
-  
-  # ----------------------------------- milestone 20 -------------------------
-  print("milestone20")
-  
-  nucleobase_select = left_join(target_region_select, cluster_tab, by =
-                                  'start') %>%
-    group_by(cluster) %>%
-    sample_n(1) %>%
-    ungroup()
-  
   # ----------------------------------- milestone 21 -------------------------
   print("milestone21")
   
@@ -797,13 +716,6 @@ function(input, output, session) {
               rownames = FALSE,
               selection = "single") %>%
       formatStyle(names(target_region_select), color = "black")
-  })
-  
-  output$results2 <- renderDataTable({
-    datatable(nucleobase_select,
-              rownames = FALSE,
-              selection = "single") %>%
-      formatStyle(names(nucleobase_select), color = "black")
   })
   
   # ----------------------------------- Fayes deel ---------------------------
@@ -853,10 +765,12 @@ function(input, output, session) {
       cached_results(cache)
     }
     
+    
     current_offtargets(subset_df)
     
     output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
   })
+
   
   output$offtarget_results <- DT::renderDataTable({
     req(current_offtargets())
@@ -881,6 +795,45 @@ function(input, output, session) {
       write.csv2(data_offtarget, con, row.names = FALSE)
     }
   )
+  
+  # ----------------------------------- Proteinatlas/OMIM off-target search---
+  # Function for parsing OMIM and Protein atlast data
+  
+  
+  observeEvent(input$PAtlas_OMIM_search, {
+    offtargets <- current_offtargets()
+    View(offtargets)
+    req(offtargets)
+    offtargets <- offtargets %>%
+      filter(distance < 2) %>%
+      head(5)
+    ens_ID <- unique(offtargets$transcript)
+    
+    PAtlas_result_list <- lapply(ens_ID, function(tx) {
+      PA_parsed <- parse_PAtlas(tx, input$target_tissue)
+      mutate(PA_parsed, transcript = tx)
+    })
+    PAtlas_results <- bind_rows(PAtlas_result_list)
+    
+    offtargets <- offtargets %>%
+      left_join(PAtlas_results, by = c("transcript" = "transcript"))
+    
+    # OMIM, try/catch for when no OMIM key is in file
+    tryCatch({
+      gene_id <- unique(offtargets$gene_name)
+      
+      OMIM_results <- lapply(gene_id, OMIM_search) %>%
+        bind_rows()
+      
+      offtargets <- offtargets %>%
+        left_join(OMIM_results, by = c("gene_name" = "gene"))
+    }, error = function(e) {
+      message("OMIM search skipped: No OMIM key found in file or OMIM API unavailable")
+    })
+    
+    current_offtargets(offtargets)
+  })
+  
   
   # ----------------------------------- Harrys deel --------------------------
   
@@ -1077,7 +1030,7 @@ function(input, output, session) {
           updateSelectInput(session, "user_mismatch", selected = 2)
           
           default_subset <- off_targets_total %>%
-            filter(toupper(name) == seq, `distance` <= 2)
+            filter(toupper(name) == seq, `distance` <= 1)
           
           current_offtargets(default_subset)
           
