@@ -482,7 +482,6 @@ function(input, output, session) {
       print("milestone17.1")
       
       if (input$linux_input == TRUE) {
-        # Deze nog toevoegen wanneer viennaRNA werkt
         uni_tar$sec_energy = RNAselffold_R(uni_tar$oligo_seq)
         uni_tar$duplex_energy = RNAduplex_R(uni_tar$oligo_seq)
       }
