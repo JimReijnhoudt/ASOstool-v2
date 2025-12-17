@@ -22,7 +22,7 @@ rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime)
   overlap_3prime <- 2
   start_min  <- max(1, (mod_5prime + 1) - overlap_5prime)
   start_max <- min(rna_len - window_size + 1,
-                   (rna_len - mod_3prime - window_size + 1) + overlap_3prime
+    (rna_len - mod_3prime - window_size + 1) + overlap_3prime
   )
   
   if (start_min > start_max) {
