@@ -1,16 +1,26 @@
 # ASOstool-v2 — User & Developer Guide
 
 ## Setup guide
-
+***
 ### 👥 Regular user setup (Shiny server only)
 
-This section is for end-users who only need to run the Shiny application. No RStudio or Git is required. 
+This section is for end-users who only need to run the Shiny application. No RStudio or Git setup is required. 
 
-#### 1. Build the Docker image 
+#### 1. Clone git repo
+Clone this git repository and navigate to the application folder.
 
-```docker build -t asostoolv2 .```
+```
+git clone https://github.com/JimReijnhoudt/ASOstool-v2.git
+cd ASOstool-v2
+```
 
-#### 2. Start the container
+#### 2. Build the Docker image 
+
+```
+docker build -t asostoolv2 .
+```
+
+#### 3. Start the container
 
 
 On Linux/Mac:
@@ -29,7 +39,7 @@ docker run -d `
   asostoolv2
 ```
 
-#### 3. Open the Shiny App
+#### 4. Open the Shiny App
 
 Open:
 
@@ -37,7 +47,7 @@ Open:
 
 You're done!
 
-#### 4. Stop the container
+#### 5. Stop the container
 
 Stop the container after you're done to free up ports.
 List running containers:
@@ -57,21 +67,32 @@ Remove it (optional):
 ```
 docker rm <container_id>
 ```
-
+***
 ### 💻 Developer setup (RStudio + Git + SSH)
 
 This section is for developers contributing to the project.
-Before starting build the docker container:
 
-```docker build -t asostoolv2 .```
+#### 1. Clone git repo
+Clone this git repository and navigate to the application folder.
 
-#### 1. Create a persistent volume for RStudio home
+```
+git clone https://github.com/JimReijnhoudt/ASOstool-v2.git
+cd ASOstool-v2
+```
+
+#### 2. Build the Docker image 
+
+```
+docker build -t asostoolv2 .
+```
+
+#### 3. Create a persistent volume for RStudio home
 
 ```
 docker volume create rstudio-home
 ```
 
-#### 2. Start the development container
+#### 4. Start the development container
 
 Mount:
 
@@ -100,7 +121,7 @@ docker run -d `
   asostoolv2
 ```
 
-#### 3. Log into RStudio and create project
+#### 5. Log into RStudio
 
 Open:
 
@@ -111,17 +132,19 @@ Credentials:
 -   Username: rstudio
 -   Password: rstudio
 
-Create a new project in R-studio by directory > Select ASOstool-v2 directory.
+#### 6. Create a new R-studio project
 
-#### 4. Set up SSH keys (first time only)
+**Create a project** in R-studio > By directory > Select ASOstool-v2 directory.
+
+#### 7. Set up SSH keys (first time only)
 
 Open the Terminal inside RStudio.
 
-##### 4.1 Start SSH agent
+##### 7.1 Start SSH agent
 
 ```eval "$(ssh-agent -s)"```
 
-##### 4.2 Generate SSH key
+##### 7.2 Generate SSH key
 
 Replace example email with github email
 
@@ -129,11 +152,11 @@ Replace example email with github email
 
 Press ENTER for all prompts.
 
-##### 4.3 Add the key to ssh-agent
+##### 7.3 Add the key to ssh-agent
 
 ```ssh-add ~/.ssh/id_ed25519```
 
-##### 4.4 Add your public key to GitHub
+##### 7.4 Add your public key to GitHub
 
 ```cat ~/.ssh/id_ed25519.pub```
 
@@ -141,7 +164,7 @@ Copy → GitHub →
 
 **Settings** → **SSH and GPG Keys** → **New SSH key**
 
-#### 5. Configure Git user (first time only)
+#### 8. Configure Git user (first time only)
 
 ```         
 git config --global user.name "Your Name"`
@@ -150,7 +173,7 @@ git config --global user.email "you@example.com"
 
 These persist thanks to the rstudio-home volume.
 
-#### 6. Fix Push/Pull — convert HTTPS to SSH
+#### 9. Fix Push/Pull — convert HTTPS to SSH
 
 If your remote url is set trough https you need to switch to SSH
 
@@ -174,7 +197,7 @@ origin  git@github.com:JimReijnhoudt/ASOstool-v2.git (push)
 
 Now the Push and Pull buttons in RStudio Git tab become active.
 
-#### 7. Fix: “All files show as modified”
+#### 10. Fix: “All files show as modified”
 
 Run once:
 
@@ -182,7 +205,7 @@ Run once:
 git config core.autocrlf input
 ```
 
-#### 8. Stop the development container
+#### 11. Stop the development container
 
 Stop the container after you're done to free up ports.
 List running containers:
@@ -202,7 +225,7 @@ Remove it (optional):
 ```
 docker rm <container_id>
 ```
-
+---
 ### ✔ Setup Summary Table
 
 | Action                                                     | Required Once | Required Each Restart |
@@ -215,7 +238,7 @@ docker rm <container_id>
 | Start ssh-agent + ssh-add (If using password for SSH key)   | ❌             | ✔                     |
 | Run docker container                                        | ❌             | ✔                     |
 | Stop container                                              | ❌             | ✔                     |
-
+***
 ### 📦 Dependencies
 | Component                                   | Version                | Source / Notes                                                                 |
 |---------------------------------------------|------------------------|-------------------------------------------------------------------------------|
