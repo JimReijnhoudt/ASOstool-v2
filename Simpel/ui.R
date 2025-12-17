@@ -40,14 +40,14 @@ ui <- fluidPage(
         textInput(
           "ensemble_id_input",
           label = tagList(
-            "Enter Ensemble id:  ",
+            "Enter Ensembl id:  ",
             tags$span(
               tags$img(
                 src = "questionmark.png",
                 height = "20px",
                 style = "margin-bottom: 3px;"
               ),
-              title = "Test on hover",
+              title = "Please enter a valid Ensembl Gene ID (ENSG…) for the gene of interest.",
               `data-placement` = "right",
               `data-toggle` = "tooltip",
               style = "cursor: pointer;"
@@ -65,7 +65,7 @@ ui <- fluidPage(
                 height = "20px",
                 style = "margin-bottom: 3px;"
               ),
-              title = "Test on hover",
+              title = "This feature identifies single nucleotide polymorphisms (SNPs) for the selected Ensembl gene. SNPs are genetic variations in which one nucleotide has changed, for example, a C to a T.",
               `data-placement` = "right",
               `data-toggle` = "tooltip",
               style = "cursor: pointer;"
@@ -83,7 +83,7 @@ ui <- fluidPage(
                 height = "20px",
                 style = "margin-bottom: 3px;"
               ),
-              title = "Test on hover",
+              title = "This feature compares an Ensembl gene to the mouse genome to identify conserved regions and orthologous genes. Because of the strong genetic similarity between mice and humans, this helps determine whether the gene can be studied in vivo in mice.",
               `data-placement` = "right",
               `data-toggle` = "tooltip",
               style = "cursor: pointer;"
@@ -101,7 +101,7 @@ ui <- fluidPage(
                 height = "20px",
                 style = "margin-bottom: 3px;"
               ),
-              title = "Test on hover",
+              title = "Enable this setting only when running on a Linux operating system. Some features, such as the ViennaRNA analysis, require Linux. Enabling this option on other systems, such as Windows or Mac, may cause the program to fail.",
               `data-placement` = "right",
               `data-toggle` = "tooltip",
               style = "cursor: pointer;"
@@ -119,7 +119,7 @@ ui <- fluidPage(
                 height = "20px",
                 style = "margin-bottom: 3px;"
               ),
-              title = "Test on hover",
+              title = "This option allows the user to input a length/range for the target mRNA sequences and complementary ASO sequences. Larger lengths/ranges will generally have a shorter runtime, while shorter lengths/ranges will take longer to process. ",
               `data-placement` = "right",
               `data-toggle` = "tooltip",
               style = "cursor: pointer;"
@@ -141,7 +141,7 @@ ui <- fluidPage(
                   height = "20px",
                   style = "margin-bottom: 3px;"
                 ),
-                title = "Test on hover",
+                title = "This option sets the amount of perfect matches allowed. The value is used as a quality control threshold of the target mRNA sequences. ",
                 `data-toggle` = "tooltip",
                 `data-placement` = "right",
                 style = "cursor: pointer;"
@@ -169,7 +169,7 @@ ui <- fluidPage(
                   height = "20px",
                   style = "margin-bottom: 3px;"
                 ),
-                title = "Test on hover",
+                title = "This option sets the amount of mismatches allowed. The value is used as a quality control threshold of the target mRNA sequences.",
                 `data-toggle` = "tooltip",
                 `data-placement` = "right",
                 style = "cursor: pointer;"
@@ -197,7 +197,7 @@ ui <- fluidPage(
                   height = "20px",
                   style = "margin-bottom: 3px;"
                 ),
-                title = "Test on hover",
+                title = "This option is a quality control score for the accessibility of the target mRNA sequences. The score estimates how accessible the target mRNA sequences are, which is an important factor in finding potentially effective ASOs. ",
                 `data-toggle` = "tooltip",
                 `data-placement` = "right",
                 style = "cursor: pointer;"
@@ -226,7 +226,7 @@ ui <- fluidPage(
                   height = "20px",
                   style = "margin-bottom: 3px;"
                 ),
-                title = "Test on hover",
+                title = "This quality control score estimates the probability that a polymorphism (SNP) is present in the target mRNA sequences. Lower values are preferred, as they indicate a reduced likelihood of polymorphic variation.",
                 `data-toggle` = "tooltip",
                 `data-placement` = "right",
                 style = "cursor: pointer;"
@@ -254,7 +254,7 @@ ui <- fluidPage(
                   height = "20px",
                   style = "margin-bottom: 3px;"
                 ),
-                title = "Test on hover",
+                title = "This quality control score estimates the potential toxicity of the complementary ASO targeting the mRNA sequence, providing insight into the safety risk of a chosen ASO. Higher values correspond to lower toxicity, which is favourable.",
                 `data-toggle` = "tooltip",
                 `data-placement` = "right",
                 style = "cursor: pointer;"
@@ -285,7 +285,9 @@ ui <- fluidPage(
         id = "tabs_main",
         tabPanel(
           "Sequence results",
-          downloadButton("Download_input", "Download Results", style = "margin-top: 20px"),
+          div("This is the main page of the application, which displays the primary output table. The table lists all potential target mRNA sequences for the provided Ensembl ID and includes information to help the user select suitable ASO targets. After selecting an ASO, the application automatically redirects to the RNase H tab, and the chosen ASO becomes available for further analysis on all other tabs.", style="margin-top: 20px; font-size: 18px;"),
+          hr(),
+          downloadButton("Download_input", "Download Results"),
           hr(),
           DT::dataTableOutput('results1'),
           DT::dataTableOutput('results2')
@@ -293,6 +295,8 @@ ui <- fluidPage(
         
         tabPanel(
           "RNase H cleavage results",
+          div("This page predicts the optimal binding site for RNase H on the chosen target mRNA sequence. It uses a matrix of dinucleotide values and a sliding window approach to evaluate all possible binding sites along the mRNA sequence. The script accounts for chemical modifications on the ASO’s 5’ and 3’ ends, which can affect possible binding sites. Each potential site is scored based on the average from the dinucleotide matrix, and the results are ranked to highlight the most promising locations for RNase H cleavage.", style="margin-top: 20px; font-size: 18px;"),
+          hr(),
           h3(textOutput("rnaseh_title")),
           div(uiOutput("rnaseh_info"), style = "margin-bottom: 15px;"),
           hr(),
@@ -305,7 +309,7 @@ ui <- fluidPage(
                 "Amount of modified nucleotides at the 5' end  ",
                 tags$span(
                   tags$img(src = "questionmark.png", height = "20px"),
-                  title = "Test on hover",
+                  title = "This setting adds modifications to the 5' end of the ASO sequence, which affect the accessible binding sites on the target mRNA. An overlap of up to 2 modified nucleotides on the 3' end of the target mRNA is allowed.",
                   `data-toggle` = "tooltip",
                   style = "cursor: pointer;"
                 )
@@ -323,7 +327,7 @@ ui <- fluidPage(
                 "Amount of modified nucleotides at the 3' end  ",
                 tags$span(
                   tags$img(src = "questionmark.png", height = "20px"),
-                  title = "Test on hover",
+                  title = "This setting adds modifications to the 3' end of the ASO sequence, which affect the accessible binding sites on the target mRNA. An overlap of up to 4 modified nucleotides on the 5' end of the target mRNA is allowed.",
                   `data-toggle` = "tooltip",
                   style = "cursor: pointer;"
                 )
@@ -347,6 +351,8 @@ ui <- fluidPage(
         
         tabPanel(
           "Off target results",
+          div("This page displays the off-targets for the selected target mRNA sequence based on the allowed number of mismatches. For the complementary ASO sequence, it shows mismatches, deletions, insertions, protein name and additional information from GGGenome. The protein name is then given to Protein Atlas to retrieve the tissue expression data. This page also calculates the accessibility potential of each off-target.", style="margin-top: 20px; font-size: 18px;"),
+          hr(),
           h3(textOutput("offtarget_title")),
           textOutput("numb_offtargets"),
           textOutput("aso_seq"),
@@ -357,7 +363,7 @@ ui <- fluidPage(
               "Select number of mismatches allowed  ",
               tags$span(
                 tags$img(src = "questionmark.png", height = "20px"),
-                title = "Test on hover",
+                title = "This setting identifies off-target sequences according to the number of mismatches permitted in the target mRNA, with a default value of one mismatch. Allowing more mismatches results in more off-targets being detected but also increases the processing time.",
                 `data-toggle` = "tooltip",
                 style = "cursor: pointer;"
               )
