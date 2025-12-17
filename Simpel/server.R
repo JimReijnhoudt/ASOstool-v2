@@ -188,10 +188,9 @@ function(input, output, session) {
   # txdb_hsa <- loadDb("txdb_hsa_biomart.db")
   getwd()
   # --- Harrys data location with script ---
-  txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
+  #txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
   
-  # --- Jims data location with docker --- 
-  # txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+  txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
   # ----------------------------------- milestone 1 --------------------------
   print("milestone1: loaded human database object")
@@ -337,6 +336,43 @@ function(input, output, session) {
   
   # ----------------------------------- milestone 9 --------------------------
   print("milestone 9: Calculated toxicity score and filtering")
+  
+  # Define motif weights
+  motif_weights <- c(
+    CCAC = +0.3,
+    TCCC = +0.3,
+    ACTC = +0.2,
+    GCCA = +0.2,
+    CTCT = +0.1,
+    GGGG = -0.2,
+    ACTG = -0.2,
+    TAA  = -0.2,
+    CCGG = -0.1,
+    AAA  = -0.1
+  )
+  
+  motif_counts <- sapply(names(motif_weights), function(m) {
+    vcountPattern(m, target_annotation$oligo_seq)
+  })
+  
+  motif_scores <- motif_counts %*% motif_weights
+  
+  motif_scores <- round(motif_scores, 6)
+  
+  motif_result <- data.frame(
+    motif_counts,
+    motif_cor_score = motif_scores[, 1]
+  )
+  
+  # Add each motif count column to target_annotation
+  target_annotation <- cbind(
+    target_annotation,
+    motif_result
+  )
+  
+  
+  # ----------------------------------- milestone x --------------------------
+  print("milestone 9.5: Calculated motif correlation score")
   
   # Bereken aantal "cg"
   target_annotation$CGs = (target_annotation$length -
@@ -558,7 +594,7 @@ function(input, output, session) {
     mutate(distance = mismatches + deletions + insertions,
             gene_name = str_extract(line, "(?<=\\|)[^;]+")
     )
-  
+
   
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
@@ -658,6 +694,19 @@ function(input, output, session) {
     ) # Include a close button)
   }
   
+  ## Split correlation motifs from dataframe
+  motif_results_cols <- names(motif_result)
+  motif_results_cols <- append(motif_results_cols, c('name', 'oligo_seq'))
+  motif_cols <- names(motif_weights)
+  
+  
+  # Motif_results including motif count after filtering
+  motif_results_filtered <- target_region_select %>%
+    select(all_of(motif_results_cols))
+ 
+  # Target annotation with just the correlation score
+  target_region_select <- target_region_select %>%
+    select(-all_of(motif_cols))
   # ----------------------------------- milestone 21 -------------------------
   print("milestone21")
   
