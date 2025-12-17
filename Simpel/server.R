@@ -25,8 +25,6 @@ setwd(working_dir)
 # setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
-  
-
 function(input, output, session) {
   
   # ----------------------------------- Notifications UI -----------------------
@@ -122,6 +120,44 @@ function(input, output, session) {
       as.numeric(regmatches(sys_cmd, regexpr("-?\\d+\\.\\d+", sys_cmd)))
     }
 
+    compute_offtarget_accessibility <- function(df) {
+        if (input$linux_input != TRUE) return(df)
+        
+        for (i in seq_len(nrow(df))) {
+          offtarget_seq <- gsub("-", "", df$`Subject sequence`[i])
+          l_ot <- nchar(offtarget_seq)
+          
+          snip_result <- acc_snippet(
+            begin_target  = df$start_target[i],
+            end_target    = df$end_target[i],
+            begin_snippet = df$snippet_start[i],
+            end_snippet   = df$snippet_end[i],
+            full_snippet  = df$snippet[i]
+          )
+          
+          l_snipseq <- nchar(snip_result$snippet_seq)
+          
+          df$offtarget_accessibility[i] <-
+            RNAplfold_R(
+              snip_result$snippet_seq,
+              u.in = l_ot
+            ) %>%
+            as_tibble() %>%
+            mutate(end = 1:l_snipseq) %>%
+            gather(length, accessibility, -end) %>%
+            mutate(length = as.integer(length)) %>%
+            filter(
+              length == l_ot,
+              (end - l_ot + 1) <= snip_result$target_end_internal,
+              end >= snip_result$target_start_internal
+            ) %>%
+            summarise(mean_accessibility = mean(accessibility, na.rm = TRUE)) %>%
+            pull(mean_accessibility)
+        }
+        
+        return(df)
+      }
+
     # --- Jims data location with docker --- 
     txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
@@ -188,11 +224,11 @@ function(input, output, session) {
   
   # path = getwd()
   
-  # path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
   # txdb_hsa <- loadDb("txdb_hsa_biomart.db")
   getwd()
   # --- Harrys data location with script ---
   txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
+  txdb_hsa <- loadDb("../Data/txdb_hsa.db")
     
   # ----------------------------------- milestone 1 --------------------------
   print("milestone1: loaded human database object")
@@ -759,74 +795,69 @@ function(input, output, session) {
   current_offtargets <- reactiveVal(NULL)
   cached_results <- reactiveVal(list())
   
-  observeEvent(input$apply_mismatch, {
-    req(current_seq())
-    
-    mm  <- as.numeric(input$user_mismatch)
-    seq <- toupper(current_seq())
-    key <- paste0("mm", mm)
-    
-    current_mismatch(mm)
-    cache <- cached_results()
-    
-    if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
-      subset_df <- cache[[seq]][[key]]
-      
-    } else {
-      if (mm %in% c(0, 1, 2)) {
-        subset_df <- off_targets_total %>%
-          filter(toupper(name) == seq, `distance` <= mm)
+      observeEvent(input$apply_mismatch, {
+        req(current_seq())
         
-      } else if (mm == 3) {
-        showNotification(
-          "Results loading",
-          type = "default",
-          duration = NULL,
-          # Notification stays until clicked away
-          closeButton = TRUE
+        seq <- toupper(current_seq())
+        mm  <- as.numeric(input$user_mismatch)
+        key <- paste0("mm", mm)
+        
+        current_mismatch(mm)
+        cache <- cached_results()
+        
+        if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
+          subset_df <- cache[[seq]][[key]]
+          
+        } else {
+          if (mm %in% c(0, 1, 2)) {
+            subset_df <- summary_server %>%
+              filter(toupper(name) == seq, `Total Mismatches` <= mm)
+            
+          } else if (mm == 3) {
+            showNotification("Results loading", type = "default",
+                             duration = NULL, closeButton = TRUE)
+            new_res <- all_offt(seq, 3)
+            print("mm3 gedaan")
+            new_res$name   <- seq
+            new_res$length <- nchar(seq)
+            subset_df <- new_res
+          }
+          
+          subset_df <- compute_offtarget_accessibility(subset_df)
+          
+          if (is.null(cache[[seq]])) cache[[seq]] <- list()
+          cache[[seq]][[key]] <- subset_df
+          cached_results(cache)
+        }
+        
+        if (input$linux_input == TRUE) {
+          subset_df <- subset_df %>% 
+            relocate(offtarget_accessibility, .after = `Total Insertions`)
+        }
+        
+        current_offtargets(subset_df)
+        
+        output$numb_offtargets <- renderText(
+          paste0("# off targets: ", nrow(subset_df))
         )
-        
-        new_res <- all_offt(seq, 3)
-        new_res$name   <- seq
-        new_res$length <- nchar(seq)
-        
-        subset_df <- new_res
-      }
+      })
       
-      if (is.null(cache[[seq]]))
-        cache[[seq]] <- list()
-      cache[[seq]][[key]] <- subset_df
-      cached_results(cache)
-    }
-    
-    current_offtargets(subset_df)
-    
-    output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
-  })
-  
-  output$offtarget_results <- DT::renderDataTable({
-    req(current_offtargets())
-    datatable(current_offtargets(), rownames = FALSE)
-  })
-  
-  output$download_offtarget <- downloadHandler(
-    filename = function() {
-      paste(
-        'offtargets_',
-        current_seq(),
-        "_mismatches_",
-        current_mismatch(),
-        "_",
-        Sys.Date(),
-        '.csv'
+      output$offtarget_results <- DT::renderDataTable({
+        req(current_offtargets())
+        datatable(current_offtargets(), rownames = FALSE)
+      })
+      
+      output$download_offtarget <- downloadHandler(
+        filename = function() {
+          paste(
+            'offtargets_', current_seq(), "_mismatches_", current_mismatch(),
+            "_", Sys.Date(), '.csv'
+          )
+        },
+        content = function(con) {
+          write.csv2(current_offtargets(), con, row.names = FALSE)
+        }
       )
-    },
-    content = function(con) {
-      data_offtarget <- current_offtargets()
-      req(data_offtarget)
-      write.csv2(data_offtarget, con, row.names = FALSE)
-    }
-  )
   
   # ----------------------------------- Harrys deel --------------------------
   
@@ -1015,25 +1046,51 @@ function(input, output, session) {
         row_data <- table_data[row, ]
         
         # Off-target functionality
-        seq <- toupper(row_data$name)
-        
-        if (grepl("^[ACGT]+$", seq)) {
-          current_seq(seq)
-          current_mismatch(2)
-          updateSelectInput(session, "user_mismatch", selected = 2)
-          
-          default_subset <- off_targets_total %>%
-            filter(toupper(name) == seq, `distance` <= 2)
-          
-          current_offtargets(default_subset)
-          
-          output$offtarget_title <- renderText(paste0("Off target results for: ", seq))
-          output$aso_seq <- renderText(paste0(
-            "ASO sequence: ",
-            as.character(reverseComplement(DNAString(seq)))
-          ))
-          output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(default_subset)))
-        }
+              req(row_data$name)
+              seq <- toupper(row_data$name)
+              
+              if (!grepl("^[ACGT]+$", seq)) return()
+              current_seq(seq)
+              mm <- 2
+              current_mismatch(mm)
+              updateSelectInput(session, "user_mismatch", selected = 2)
+              
+              key <- paste0("mm", mm)
+              cache <- cached_results()
+              
+              if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
+                # Cached data (met of zonder accessibility)
+                default_subset <- cache[[seq]][[key]]
+                
+              } else {
+                # Basis subset
+                default_subset <- summary_server %>%
+                  filter(toupper(name) == seq, `Total Mismatches` <= mm)
+              }
+              
+              # calculate accessibility 
+              if (input$linux_input == TRUE) {
+                default_subset <- compute_offtarget_accessibility(default_subset)
+                default_subset <- default_subset %>% 
+                  relocate(offtarget_accessibility, .after = `Total Insertions`)
+              }
+              
+              # Cache
+              cache[[seq]][[key]] <- default_subset
+              cached_results(cache)
+              
+              # results
+              current_offtargets(default_subset)
+              
+              output$offtarget_title <- renderText(
+                paste0("Off target results for: ", seq)
+              )
+              output$aso_seq <- renderText(
+                paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq))))
+              )
+              output$numb_offtargets <- renderText(
+                paste0("# off targets: ", nrow(default_subset))
+              )
        
         # RNaseH functionality
         selected_target(row_data)

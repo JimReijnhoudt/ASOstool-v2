@@ -1,5 +1,6 @@
 library(tidyverse)
 library(httr)
+library(jsonlite)
 # library(readr)
 # library(stringr)
 # library("xlsx")
@@ -15,17 +16,13 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   condition_col <- character()
   url_col <- character()
   
-  for (st in strands) {
-    for (mc in mismatch_conditions) {
-      for (cond in conditions) {
-        url <- paste0(base_url, cond, mc, st, sequence, ".txt")
-        
-        mismatch_col <- c(mismatch_col, mc)
-        strand_col <- c(strand_col, st)
-        condition_col <- c(condition_col, cond)
-        url_col <- c(url_col, url)
-      }
-    }
+  for (cond in conditions) {
+    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".json")
+    
+    mismatch_col <- c(mismatch_col, mismatch_conditions)
+    strand_col <- c(strand_col, strands)
+    condition_col <- c(condition_col, cond)
+    url_col <- c(url_col, url)
   }
   
   # save url, mismatch and condition to a dataframe
@@ -41,45 +38,32 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
 
 # Function to filter data based on the number of equal signs
 filter_data <- function(data, criterion) {
-  start <- c('NM_', 'chr', 'NR_')
-  lines <- str_split(data, "\n")[[1]]
+  data_results <- data$results
   
-  line_col <- character()
-  equal_col <- integer()
-  mismatch_col <- integer()
-  ins_col <- integer()
-  del_col <- integer()
+  df_filtered <- data_results[
+    grepl("^(NM_|chr|NR_)", data_results$name) &
+      str_count(data_results$edit, "=") >= criterion, ]
   
-  for (line in lines) {
-    if (any(str_starts(line, start))) {
-      aantal_equal <- str_count(line, "=")
-      if (aantal_equal >= criterion){
-        line_col <- c(line_col, line)
-        
-        equal_col <- c(equal_col, aantal_equal)
-        
-        parts <- strsplit(line, "\t")[[1]]
-        mm <- as.integer(parts[13])
-        # mm <- sum(as.integer(tail(parts, 2)))
-        mismatch_col <- c(mismatch_col, mm)
-        
-        del <- as.integer(parts[14])
-        ins <- as.integer(parts[15])
-        
-        del_col <- c(del_col, del)
-        ins_col <- c(ins_col, ins)
-      }
-    }
-  }
+  if (nrow(df_filtered) == 0) return(data.frame())
+  
+  n <- nrow(df_filtered)
   
   df <- data.frame(
-    line = line_col,
-    equal_signs = equal_col,
-    mismatches = mismatch_col,
-    deletions = del_col, 
-    insertions = ins_col,
+    line = df_filtered$name,
+    equal_signs = str_count(df_filtered$edit, "="),
+    mismatches = df_filtered$mis,
+    deletions = df_filtered$del,
+    insertions = df_filtered$ins,
+    subject_seq = df_filtered$sbjct,
+    query_seq = df_filtered$query,
+    start_target = df_filtered$position,
+    end_target = df_filtered$position_end,
+    snippet = df_filtered$snippet,
+    snippet_start = df_filtered$snippet_pos,
+    snippet_end = df_filtered$snippet_end,
     stringsAsFactors = FALSE
   )
+  
   return(df)
 }
 
@@ -120,9 +104,16 @@ all_offt <- function(sequence, mismatches_allowed) {
     mismatches = integer(),
     deletions = integer(), 
     insertions = integer(),
+    subject_seq = character(),
+    query_seq = character(),
+    start_target = integer(),
+    end_target = integer(),
+    snippet = character(),
+    snippet_start = integer(),
+    snippet_end = integer(),
     stringsAsFactors = FALSE
   )
-
+  
   
   # Loop over each URL and retrieve the data from it
   for (i in 1:nrow(urls_df)) {
@@ -134,8 +125,10 @@ all_offt <- function(sequence, mismatches_allowed) {
     response <- GET(url)
     
     if (status_code(response) == 200) {
-      text_data <- content(response, "text", encoding = "UTF-8")
-      filtered_data_df <- filter_data(text_data, mismatches_allowed)
+      df_json <- fromJSON(
+        content(response, as = "text", encoding = "UTF-8"),
+        flatten = TRUE)
+      filtered_data_df <- filter_data(df_json, mismatches_allowed)
       all_df <- bind_rows(all_df, filtered_data_df)
     } else {
       print("Failed to fetch data.")
@@ -144,6 +137,14 @@ all_offt <- function(sequence, mismatches_allowed) {
     
     # Extract all unique protein names into a vector
     protein_hits <- str_match(filtered_data_df$line, "NM_\\d+\\.\\d+\\|([^;]+)")[,2]
+    
+    filtered_data_df <- filter_data(df_json, mismatches_allowed)
+    all_df <- bind_rows(all_df, filtered_data_df)
+    
+    if (nrow(filtered_data_df) == 0) {
+      next
+    }
+    
     protein_hits <- unique(na.omit(protein_hits))
     
     # Loop over all unique proteins and fill the summary_df data frame with the corresponding values
@@ -152,11 +153,38 @@ all_offt <- function(sequence, mismatches_allowed) {
       if (!is.null(expression_data) && nrow(expression_data) > 0) {
         
         protein_row <- filtered_data_df %>% filter(str_detect(line, protein_hit))
+        
+        if (nrow(protein_row) == 0) {
+          next
+        }
+        
         max_equal <- max(protein_row$equal_signs, na.rm = TRUE)
         min_mismatch <- min(protein_row$mismatches, na.rm = TRUE)
         
         min_deletions <- min(protein_row$deletions, na.rm = TRUE)
         min_insertions <- min(protein_row$insertions, na.rm = TRUE)
+        
+        chosen_row <- protein_row %>%
+          filter(
+            equal_signs == max_equal,
+            mismatches == min_mismatch,
+            deletions == min_deletions,
+            insertions == min_insertions
+          ) %>%
+          slice(1)
+        
+        if (nrow(chosen_row) == 0) {
+          next
+        }
+        
+        subject_seq <- chosen_row$subject_seq
+        query_seq   <- chosen_row$query_seq
+        
+        start_target <- chosen_row$start_target
+        end_target <- chosen_row$end_target
+        snippet <- chosen_row$snippet
+        snippet_start <- chosen_row$snippet_start
+        snippet_end <- chosen_row$snippet_end
         
         source_sheet <- paste0(str_replace_all(condition, "\\W+", "_"), "_", str_replace_all(mismatch_condition, "\\W+", "_"), "_mismatch")
         
@@ -167,10 +195,22 @@ all_offt <- function(sequence, mismatches_allowed) {
           'Total Mismatches' = min_mismatch,
           'Total Deletions' = min_deletions, 
           'Total Insertions' = min_insertions,
+          'Subject sequence' = subject_seq,
+          'Query sequence' = query_seq,
+          'start_target' = start_target,
+          'end_target' = end_target,
+          'snippet' = snippet,
+          'snippet_start' = snippet_start,
+          'snippet_end' = snippet_end,
           stringsAsFactors = FALSE
         )
         
         summary_row <- bind_cols(summary_row, expression_data[1, 2:ncol(expression_data)])
+        
+        if (ncol(expression_data) < 2) {
+          next
+        }
+        
         summary_df <- bind_rows(summary_df, summary_row)
       }
       else {
@@ -184,6 +224,13 @@ all_offt <- function(sequence, mismatches_allowed) {
         mismatches = NULL,
         deletions = NULL, 
         insertions = NULL,
+        subject_seq = NULL,
+        query_seq = NULL,
+        start_target = NULL,
+        end_target = NULL,
+        snippet = NULL,
+        snippet_start = NULL,
+        snippet_end = NULL,
         stringsAsFactors = FALSE
       )
     }
@@ -195,7 +242,8 @@ all_offt <- function(sequence, mismatches_allowed) {
   other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
   # Define new column names for the summary data frame
-  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions",
+  new_colnames <- c("Protein Hit", "Source Sheets", "Equal Signs", "Total Mismatches", "Total Deletions", "Total Insertions", "Subject sequence", "Query sequence",
+                    "start_target", "end_target", "snippet", "snippet_start", "snippet_end",
                     "Gene description", "Brain RNA - amygdala [nTPM]",
                     "Brain RNA - basal ganglia [nTPM]", "Brain RNA - cerebellum [nTPM]",
                     "Brain RNA - cerebral cortex [nTPM]", "Brain RNA - choroid plexus [nTPM]",
@@ -209,9 +257,59 @@ all_offt <- function(sequence, mismatches_allowed) {
   return(summary_df)
 }
 
+acc_snippet <- function(
+    begin_target,
+    end_target,
+    begin_snippet,
+    end_snippet,
+    full_snippet,
+    total_length = 80
+) {
+
+  target_length <- end_target - begin_target + 1
+
+  flank_total <- total_length - target_length
+  flank_left  <- floor(flank_total / 2)
+  flank_right <- ceiling(flank_total / 2)
+
+  snippet_start <- begin_target - flank_left
+  snippet_end   <- end_target   + flank_right
+
+  if (snippet_start < begin_snippet) {
+    shift <- begin_snippet - snippet_start
+    snippet_start <- begin_snippet
+    snippet_end   <- snippet_end + shift
+  }
+
+  if (snippet_end > end_snippet) {
+    shift <- snippet_end - end_snippet
+    snippet_end   <- end_snippet
+    snippet_start <- snippet_start - shift
+  }
+
+  target_start_internal <- begin_target - snippet_start + 1
+  target_end_internal   <- end_target   - snippet_start + 1
+
+  start_i <- snippet_start - begin_snippet + 1
+  end_i   <- snippet_end   - begin_snippet + 1
+
+  snippet_seq <- substr(full_snippet, start_i, end_i)
+
+  return(
+    list(
+      snippet_seq             = snippet_seq,
+      snippet_start_external  = snippet_start,
+      snippet_end_external    = snippet_end,
+      snippet_length          = total_length,
+      target_start_internal   = target_start_internal,
+      target_end_internal     = target_end_internal
+    )
+  )
+}
 
 # # ---------- Run ----------
-# dataframes <- all_offt("CACACCATGCACATTCAA")
+# options(error = recover)
+# dataframes <- all_offt("GCTTTTTGCCATCCTGGGCG", 3)
 # urls <- dataframes$urls
 # summary_df <- dataframes$summary
 # df <- dataframes$df
