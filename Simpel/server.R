@@ -25,8 +25,6 @@ setwd(working_dir)
 # setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
-
-
 function(input, output, session) {
   
   # ----------------------------------- Notifications UI -----------------------
