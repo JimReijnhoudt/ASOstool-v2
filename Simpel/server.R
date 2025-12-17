@@ -992,7 +992,7 @@ function(input, output, session) {
           ))
           output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(default_subset)))
         }
-        
+       
         # RNaseH functionality
         selected_target(row_data)
         oligo_sequence(row_data$oligo_seq)
@@ -1066,16 +1066,24 @@ function(input, output, session) {
   
   # ----------------------------------- End of script ------------------------
   
-  # Get the current date
-  current_date <- format(Sys.time(), "%Y-%m-%d %H-%M-%S")
-  
-  # Collect the data, change the name for each gene tested
-  # if (input$Download_input == TRUE) {
-  #   write.csv(target_region_select,
-  #             file = paste0("Results_output_", current_date, ".csv"))
-  #   write.csv(nucleobase_select,
-  #             file = paste0("Results_output_clustered_", current_date, ".csv"))
-  # }
+   # Collect the data, change the name for each gene tested
+      output$Download_input <- downloadHandler(
+
+        filename = function() {
+          current_date <- format(Sys.time(), "%Y-%m-%d %H-%M-%S")
+          paste0("Result_output_", current_date, ".zip")
+        },
+
+        content = function(file) {
+          file1 <- tempfile(fileext = ".csv")
+          file2 <- tempfile(fileext = ".csv")
+
+          write.csv(target_region_select(), file1, row.names = FALSE)
+          write.csv(nucleobase_select(), file2, row.names = FALSE)
+
+          zip(file, c(file1, file2), flags = "-j")
+        }
+      )
 
   t2 <- Sys.time()
   time <- t2 - t1
