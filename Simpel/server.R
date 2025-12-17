@@ -1174,5 +1174,3 @@ function(input, output, session) {
     }
   })
 }
-
-
