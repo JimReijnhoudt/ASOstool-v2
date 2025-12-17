@@ -50,7 +50,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_a", "", value = 1)),
+              column(5, numericInput("numeric_input_a", "", value = 5)),
               checkboxInput("perfect_input", "Enable", value = TRUE),
             ),
             
@@ -65,7 +65,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_b", "", value = 50)),
+              column(5, numericInput("numeric_input_b", "", value = 100)),
               checkboxInput("mismatch_input", "Enable", value = TRUE),
             ),
             
@@ -185,36 +185,7 @@ ui <- fluidPage(
         uiOutput("cleavage_visual"),
       ),
       
-      tabPanel(
-        "Off target results",
-        h3(textOutput("offtarget_title")),
-        textOutput("numb_offtargets"),
-        textOutput("aso_seq"),
-        hr(),
-        selectInput(
-          "user_mismatch",
-          label = tagList(
-            "Select number of mismatches allowed  ",
-            tags$span(
-              tags$img(src = "questionmark.png", height = "20px"),
-              title = "Test on hover",
-              `data-toggle` = "tooltip",
-              style = "cursor: pointer;"
-            )
-          ),
-          choices = list(
-            "0" = 0,
-            "1" = 1,
-            "2" = 2,
-            "3" = 3
-          )
-        ),
-        actionButton("apply_mismatch", "Apply", class = "btn-primary"),
-        hr(),
-        downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
-        DTOutput("offtarget_results")
-      )
-    ),
+  
     tabPanel(
       "Off target results", 
       h3(textOutput("offtarget_title")),
@@ -223,8 +194,25 @@ ui <- fluidPage(
       hr(),
       fluidRow(
         column(6, 
-               selectInput("user_mismatch", "Select number of mismatches allowed", choices = list("0" = 0, "1" = 1, "2" = 2, "3" = 3)),
-               actionButton("apply_mismatch", "Apply")
+               selectInput(
+                 "user_mismatch",
+                 label = tagList(
+                   "Select number of mismatches allowed  ",
+                   tags$span(
+                     tags$img(src = "questionmark.png", height = "20px"),
+                     title = "Test on hover",
+                     `data-toggle` = "tooltip",
+                     style = "cursor: pointer;"
+                   )
+                 ),
+                 choices = list(
+                   "0" = 0,
+                   "1" = 1,
+                   "2" = 2,
+                   "3" = 3
+                 )
+               ),
+               actionButton("apply_mismatch", "Apply", class = "btn-primary"),
                ),
         column(6,
                fluidRow("Run off-target tissue expression and OMIM disease search (may take some time)"),
@@ -252,7 +240,8 @@ ui <- fluidPage(
       downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
       DTOutput("offtarget_results"),
     ),
-    width = 9)
+    ),
+    width = 9),
   ),
   tags$script(
     HTML(
