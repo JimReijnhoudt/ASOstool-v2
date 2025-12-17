@@ -122,10 +122,10 @@ function(input, output, session) {
 
 
     # --- Jims data location with docker --- 
-    # txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+    txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
     # --- Harrys data location with script ---
-    txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+    # txdb_hsa <- loadDb("../Data/txdb_hsa.db")
     
     # ----------------------------------- milestone 1 --------------------------
     print("milestone1")
@@ -190,8 +190,8 @@ function(input, output, session) {
   # txdb_hsa <- loadDb("txdb_hsa_biomart.db")
   getwd()
   # --- Harrys data location with script ---
-  txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
-  txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+  # txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
+  # txdb_hsa <- loadDb("../Data/txdb_hsa.db")
     
   # ----------------------------------- milestone 1 --------------------------
   print("milestone1: loaded human database object")
