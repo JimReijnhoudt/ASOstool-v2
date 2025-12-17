@@ -1,5 +1,8 @@
 library(tidyverse)
 library(httr)
+# library(readr)
+# library(stringr)
+# library("xlsx")
 
 # Generate URLs for the calculated number of mismatches and all condition
 generate_urls <- function(sequence, mismatch_conditions, strands) {
@@ -46,6 +49,8 @@ filter_data <- function(data, criterion) {
   mismatch_col <- integer()
   ins_col <- integer()
   del_col <- integer()
+  sub_col <- character()
+  query_col <- character()
   
   for (line in lines) {
     if (any(str_starts(line, start))) {
@@ -65,6 +70,12 @@ filter_data <- function(data, criterion) {
         
         del_col <- c(del_col, del)
         ins_col <- c(ins_col, ins)
+        
+        subs <- as.character(parts[9])
+        quers <- as.character(parts[8])
+        
+        sub_col <- c(sub_col, subs)
+        query_col <- c(query_col, quers)
       }
     }
   }
@@ -75,18 +86,36 @@ filter_data <- function(data, criterion) {
     mismatches = mismatch_col,
     deletions = del_col, 
     insertions = ins_col,
+    subject_seq = sub_col,
+    query_seq = query_col,
     stringsAsFactors = FALSE
   )
   return(df)
 }
 
+# Function to fetch protein expression data from Protein Atlas
+fetch_protein_expression <- function(protein_name) {
+  base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
+  columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
+  full_url <- paste0(base_url, protein_name, columns)
+  response <- GET(full_url)
+  
+  if (status_code(response) == 200) {
+    text_data <- content(response, "text", encoding = "UTF-8")
+    df <- read_tsv(text_data)
+    return(df)
+  } else {
+    print(paste("Failed to fetch data for protein", protein_name))
+    return(NULL)
+  }
+}
 
-all_offt <- function(sequence) {
+
+all_offt <- function(sequence, mismatches_allowed) {
   # Calculate the number of mismatches based on the sequence length
   sequence_length = nchar(sequence)
-  mismatches_allowed = 2  # int(sequence_length * 0.1)  # 20% of the sequence length
+  mismatch_conditions <- paste0(mismatches_allowed, "/")
   
-  mismatch_conditions <- c("2/")
   strands <- c("+/")
   
   urls_df <- generate_urls(sequence, mismatch_conditions, strands)
@@ -101,6 +130,8 @@ all_offt <- function(sequence) {
     mismatches = integer(),
     deletions = integer(), 
     insertions = integer(),
+    subject_seq = character(),
+    query_seq = character(),
     stringsAsFactors = FALSE
   )
   
@@ -122,22 +153,35 @@ all_offt <- function(sequence) {
       print("Failed to fetch data.")
       next
     }
+    
+    if (nrow(all_df) == 0) {
+      all_df <- data.frame(
+        line = NULL,
+        equal_signs = NULL,
+        mismatches = NULL,
+        deletions = NULL, 
+        insertions = NULL,
+        subject_seq = NULL,
+        query_seq = NULL,
+        stringsAsFactors = FALSE
+      )
+    }
   }
+  
+  # Divide the data frame by condition
+  spliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|spliced"), ]
+  prespliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|prespliced"), ]
+  other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
+  
   return(all_df)
 }
 
-dataframe_test_txt <- all_offt("TTTTTGCCATCCTGGGCGCT")
 
-# sequences <- readLines("sequenties.txt")
-# 
-# run_all_on_sequence <- function(seq) {
-#   df <- all(seq)
-#   tibble(
-#     sequentie = seq,
-#     hits = nrow(df)
-#   )
-# }
-# 
-# results <- sequences %>%
-#   lapply(run_all_on_sequence) %>%
-#   bind_rows()
+# # ---------- Run ----------
+# dataframes <- all_offt("TTTTTGCCATCCTGGGCGCT", 2)
+# urls <- dataframes$urls
+# summary_df <- dataframes$summary
+# df <- dataframes$df
+# spliced <- dataframes$spliced
+# prespliced <- dataframes$prespliced
+# other <- dataframes$other
