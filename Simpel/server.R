@@ -17,12 +17,12 @@ library(openxlsx)
 
 source("../tools/GGGenome_functions.R")
 source("../tools/RNaseH_script.R")
+source("../tools/offtarget.R")
 
 # ----------------------------------- working directory ------------------------
 working_dir = getwd()
 setwd(working_dir)
 
-# setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
 function(input, output, session) {
@@ -120,49 +120,12 @@ function(input, output, session) {
       as.numeric(regmatches(sys_cmd, regexpr("-?\\d+\\.\\d+", sys_cmd)))
     }
 
-    compute_offtarget_accessibility <- function(df) {
-        if (input$linux_input != TRUE) return(df)
-        
-        for (i in seq_len(nrow(df))) {
-          offtarget_seq <- gsub("-", "", df$`Subject sequence`[i])
-          l_ot <- nchar(offtarget_seq)
-          
-          snip_result <- acc_snippet(
-            begin_target  = df$start_target[i],
-            end_target    = df$end_target[i],
-            begin_snippet = df$snippet_start[i],
-            end_snippet   = df$snippet_end[i],
-            full_snippet  = df$snippet[i]
-          )
-          
-          l_snipseq <- nchar(snip_result$snippet_seq)
-          
-          df$offtarget_accessibility[i] <-
-            RNAplfold_R(
-              snip_result$snippet_seq,
-              u.in = l_ot
-            ) %>%
-            as_tibble() %>%
-            mutate(end = 1:l_snipseq) %>%
-            gather(length, accessibility, -end) %>%
-            mutate(length = as.integer(length)) %>%
-            filter(
-              length == l_ot,
-              (end - l_ot + 1) <= snip_result$target_end_internal,
-              end >= snip_result$target_start_internal
-            ) %>%
-            summarise(mean_accessibility = mean(accessibility, na.rm = TRUE)) %>%
-            pull(mean_accessibility)
-        }
-        
-        return(df)
-      }
 
     # --- Jims data location with docker --- 
-    txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+    # txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
     # --- Harrys data location with script ---
-    #txdb_hsa <- loadDb("../Data/txdb_hsa.db")
+    txdb_hsa <- loadDb("../Data/txdb_hsa.db")
     
     # ----------------------------------- milestone 1 --------------------------
     print("milestone1")
@@ -596,7 +559,6 @@ function(input, output, session) {
             gene_name = str_extract(line, "(?<=\\|)[^;]+")
     )
   
-  
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
   
@@ -795,6 +757,44 @@ function(input, output, session) {
   current_offtargets <- reactiveVal(NULL)
   cached_results <- reactiveVal(list())
   
+  compute_offtarget_accessibility <- function(df) {
+    if (input$linux_input != TRUE) return(df)
+    
+    for (i in seq_len(nrow(df))) {
+      offtarget_seq <- gsub("-", "", df$subject_seq[i])
+      l_ot <- nchar(offtarget_seq)
+      
+      snip_result <- acc_snippet(
+        begin_target  = df$start_target[i],
+        end_target    = df$end_target[i],
+        begin_snippet = df$snippet_start[i],
+        end_snippet   = df$snippet_end[i],
+        full_snippet  = df$snippet[i]
+      )
+      
+      l_snipseq <- nchar(snip_result$snippet_seq)
+      
+      df$offtarget_accessibility[i] <-
+        RNAplfold_R(
+          snip_result$snippet_seq,
+          u.in = l_ot
+        ) %>%
+        as_tibble() %>%
+        mutate(end = 1:l_snipseq) %>%
+        gather(length, accessibility, -end) %>%
+        mutate(length = as.integer(length)) %>%
+        filter(
+          length == l_ot,
+          (end - l_ot + 1) <= snip_result$target_end_internal,
+          end >= snip_result$target_start_internal
+        ) %>%
+        summarise(mean_accessibility = mean(accessibility, na.rm = TRUE)) %>%
+        pull(mean_accessibility)
+    }
+    
+    return(df)
+  }
+  
       observeEvent(input$apply_mismatch, {
         req(current_seq())
         
@@ -811,7 +811,7 @@ function(input, output, session) {
         } else {
           if (mm %in% c(0, 1, 2)) {
             subset_df <- summary_server %>%
-              filter(toupper(name) == seq, `Total Mismatches` <= mm)
+              filter(toupper(name) == seq, mismatches <= mm)
             
           } else if (mm == 3) {
             showNotification("Results loading", type = "default",
@@ -832,7 +832,7 @@ function(input, output, session) {
         
         if (input$linux_input == TRUE) {
           subset_df <- subset_df %>% 
-            relocate(offtarget_accessibility, .after = `Total Insertions`)
+            relocate(offtarget_accessibility, .after = insertions)
         }
         
         current_offtargets(subset_df)
@@ -1059,20 +1059,17 @@ function(input, output, session) {
               cache <- cached_results()
               
               if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
-                # Cached data (met of zonder accessibility)
                 default_subset <- cache[[seq]][[key]]
                 
               } else {
-                # Basis subset
                 default_subset <- summary_server %>%
-                  filter(toupper(name) == seq, `Total Mismatches` <= mm)
+                  filter(toupper(name) == seq, mismatches <= mm)
               }
               
-              # calculate accessibility 
               if (input$linux_input == TRUE) {
                 default_subset <- compute_offtarget_accessibility(default_subset)
                 default_subset <- default_subset %>% 
-                  relocate(offtarget_accessibility, .after = `Total Insertions`)
+                  relocate(offtarget_accessibility, .after = insertions)
               }
               
               # Cache
