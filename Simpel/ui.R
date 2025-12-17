@@ -250,7 +250,8 @@ ui <- fluidPage(
       ),
       hr(),
       downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
-      DTOutput("offtarget_results")
+      DTOutput("offtarget_results"),
+    ),
     width = 9)
   ),
   tags$script(
