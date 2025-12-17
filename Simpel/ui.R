@@ -157,7 +157,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_a", "", value = 1)),
+              column(5, numericInput("numeric_input_a", "", value = 5)),
               checkboxInput("perfect_input", "Enable", value = TRUE),
             ),
             
@@ -185,7 +185,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_b", "", value = 50)),
+              column(5, numericInput("numeric_input_b", "", value = 100)),
               checkboxInput("mismatch_input", "Enable", value = TRUE),
             ),
             
@@ -368,21 +368,80 @@ ui <- fluidPage(
                 style = "cursor: pointer;"
               )
             ),
-            choices = list(
-              "0" = 0,
-              "1" = 1,
-              "2" = 2,
-              "3" = 3
-            )
-          ),
-          actionButton("apply_mismatch", "Apply", class = "btn-primary"),
-          hr(),
-          downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
-          DTOutput("offtarget_results")
-        )
+            value = 0,
+            min = 0,
+            max = 10,
+            width = "60%"
+          )
+        )),
+        actionButton("add_mods", "Apply end modifications", class = "btn-primary"),
+        hr(),
+        
+        downloadButton("download_rnaseh", "Download results", style = "margin-bottom: 15px;"),
+        dataTableOutput("rnaseh_results"),
+        hr(),
+        
+        h3("Visualised cleavage site: "),
+        uiOutput("cleavage_visual"),
       ),
-      width = 9
-    )
+      
+  
+    tabPanel(
+      "Off target results", 
+      h3(textOutput("offtarget_title")),
+      textOutput("aso_seq"),
+      textOutput("numb_offtargets"),
+      hr(),
+      fluidRow(
+        column(6, 
+               selectInput(
+                 "user_mismatch",
+                 label = tagList(
+                   "Select number of mismatches allowed  ",
+                   tags$span(
+                     tags$img(src = "questionmark.png", height = "20px"),
+                     title = "Test on hover",
+                     `data-toggle` = "tooltip",
+                     style = "cursor: pointer;"
+                   )
+                 ),
+                 choices = list(
+                   "0" = 0,
+                   "1" = 1,
+                   "2" = 2,
+                   "3" = 3
+                 )
+               ),
+               actionButton("apply_mismatch", "Apply", class = "btn-primary"),
+               ),
+        column(6,
+               fluidRow("Run off-target tissue expression and OMIM disease search (may take some time)"),
+               
+               fluidRow(
+                 selectInput("target_tissue", "Select target tissue", choices = c("Brain",
+                                                                                  "Eye",
+                                                                                  "Endrocrine tissue",
+                                                                                  "Respiratory system",
+                                                                                  "Proximal digestive tract",
+                                                                                  "Gastrointestinal tract",
+                                                                                  "Liver & galbladder",
+                                                                                  "Pancreas",
+                                                                                  "Kidney & urinary bladder",
+                                                                                  "Male tissues",
+                                                                                  "Female tissues",
+                                                                                  "Muscle tissues",
+                                                                                  "Connective & soft tissues",
+                                                                                  "Skin",
+                                                                                  "Bone marrow & lymphoid tissues")),
+                 actionButton("PAtlas_OMIM_search", "Run"))
+               )
+      ),
+      hr(),
+      downloadButton("download_offtarget", "Download results", style = "margin-bottom: 15px;"),
+      DTOutput("offtarget_results"),
+    ),
+    ),
+    width = 9),
   ),
   tags$script(
     HTML(
