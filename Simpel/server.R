@@ -724,6 +724,49 @@ function(input, output, session) {
   current_offtargets <- reactiveVal(NULL)
   cached_results <- reactiveVal(list())
   
+  compute_offtarget_accessibility <- function(df) {
+    if (input$linux_input != TRUE) return(df)
+    
+    for (i in seq_len(nrow(df))) {
+      if (df$distance[i] >= 2){
+        df$offtarget_accessibility[i] <- NA_real_
+        next
+      }
+      
+      offtarget_seq <- gsub("-", "", df$subject_seq[i])
+      l_ot <- nchar(offtarget_seq)
+      
+      snip_result <- acc_snippet(
+        begin_target  = df$start_target[i],
+        end_target    = df$end_target[i],
+        begin_snippet = df$snippet_start[i],
+        end_snippet   = df$snippet_end[i],
+        full_snippet  = df$snippet[i]
+      )
+      
+      l_snipseq <- nchar(snip_result$snippet_seq)
+      
+      df$offtarget_accessibility[i] <-
+        RNAplfold_R(
+          snip_result$snippet_seq,
+          u.in = l_ot
+        ) %>%
+        as_tibble() %>%
+        mutate(end = 1:l_snipseq) %>%
+        gather(length, accessibility, -end) %>%
+        mutate(length = as.integer(length)) %>%
+        filter(
+          length == l_ot,
+          (end - l_ot + 1) <= snip_result$target_end_internal,
+          end >= snip_result$target_start_internal
+        ) %>%
+        summarise(mean_accessibility = mean(accessibility, na.rm = TRUE)) %>%
+        pull(mean_accessibility)
+    }
+    
+    return(df)
+  }
+  
   observeEvent(input$apply_mismatch, {
     req(current_seq())
     
@@ -758,12 +801,18 @@ function(input, output, session) {
         subset_df <- new_res
       }
       
+      subset_df <- compute_offtarget_accessibility(subset_df)
+      
       if (is.null(cache[[seq]]))
         cache[[seq]] <- list()
       cache[[seq]][[key]] <- subset_df
       cached_results(cache)
     }
     
+    if (input$linux_input == TRUE) {
+      subset_df <- subset_df %>% 
+        relocate(offtarget_accessibility, .after = insertions)
+    }
     
     current_offtargets(subset_df)
     
@@ -1021,25 +1070,48 @@ function(input, output, session) {
         row_data <- table_data[row, ]
         
         # Off-target functionality
+        req(row_data$name)
         seq <- toupper(row_data$name)
         
-        if (grepl("^[ACGT]+$", seq)) {
-          current_seq(seq)
-          current_mismatch(2)
-          updateSelectInput(session, "user_mismatch", selected = 2)
+        if (!grepl("^[ACGT]+$", seq)) return()
+        
+        current_seq(seq)
+        current_mismatch(2)
+        updateSelectInput(session, "user_mismatch", selected = 2)
+        
+        key <- paste0("mm", mm)
+        cache <- cached_results()
+        
+        if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
+          default_subset <- cache[[seq]][[key]]
           
+        } else {
           default_subset <- off_targets_total %>%
             filter(toupper(name) == seq, `distance` <= 1)
-          
-          current_offtargets(default_subset)
-          
-          output$offtarget_title <- renderText(paste0("Off target results for: ", seq))
-          output$aso_seq <- renderText(paste0(
-            "ASO sequence: ",
-            as.character(reverseComplement(DNAString(seq)))
-          ))
-          output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(default_subset)))
         }
+        
+        if (input$linux_input == TRUE) {
+          default_subset <- compute_offtarget_accessibility(default_subset)
+          default_subset <- default_subset %>% 
+            relocate(offtarget_accessibility, .after = insertions)
+        }
+        
+        # Cache
+        cache[[seq]][[key]] <- default_subset
+        cached_results(cache)
+        
+        # results
+        current_offtargets(default_subset)
+        
+        output$offtarget_title <- renderText(
+          paste0("Off target results for: ", seq)
+        )
+        output$aso_seq <- renderText(
+          paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq))))
+        )
+        output$numb_offtargets <- renderText(
+          paste0("# off targets: ", nrow(default_subset))
+        )
        
         # RNaseH functionality
         selected_target(row_data)
