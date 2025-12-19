@@ -157,7 +157,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_a", "", value = 1)),
+              column(5, numericInput("numeric_input_a", "", value = 5)),
               checkboxInput("perfect_input", "Enable", value = TRUE)
             ),
             
@@ -185,7 +185,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_b", "", value = 50)),
+              column(5, numericInput("numeric_input_b", "", value = 100)),
               checkboxInput("mismatch_input", "Enable", value = TRUE)
             ),
             

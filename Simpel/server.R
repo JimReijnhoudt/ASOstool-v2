@@ -19,15 +19,14 @@ source("../tools/GGGenome_functions.R")
 source("../tools/RNaseH_script.R")
 source("../tools/Off_target_tissue.R")
 source("../tools/Off_target_OMIM_Api.R")
+source("../tools/Off_target_accessibility.R")
 
 # ----------------------------------- working directory ------------------------
 working_dir = getwd()
 setwd(working_dir)
 
-# setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
 
-  
 
 function(input, output, session) {
   
