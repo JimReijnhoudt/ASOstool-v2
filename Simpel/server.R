@@ -19,13 +19,15 @@ source("../tools/GGGenome_functions.R")
 source("../tools/RNaseH_script.R")
 source("../tools/Off_target_tissue.R")
 source("../tools/Off_target_OMIM_Api.R")
-source("../tools/offtarget.R")
 
 # ----------------------------------- working directory ------------------------
 working_dir = getwd()
 setwd(working_dir)
 
+# setwd("C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2")
 print("work directory set")
+
+  
 
 function(input, output, session) {
   
@@ -37,7 +39,7 @@ function(input, output, session) {
     duration = NULL,
     closeButton = TRUE
   )
-  
+
   t1 <- Sys.time()
   
   observeEvent(input$run_button, {
@@ -47,49 +49,49 @@ function(input, output, session) {
       duration = NULL,
       closeButton = TRUE
     )
+  
+  # ----------------------------------- Functions ----------------------------
+  # Make the tox score function
+  
+  calculate_acute_neurotox <- function(xx) {
+    # make sure input is in character format
+    xx <- as.character(xx)
     
-    # ----------------------------------- Functions ----------------------------
-    # Make the tox score function
-    
-    calculate_acute_neurotox <- function(xx) {
-      # make sure input is in character format
-      xx <- as.character(xx)
-      
-      # count the number of each nucleotide
-      lf <- function(x) {
-        x <- tolower(x)
-        x <- strsplit(x, "")[[1]]
-        x <- table(factor(x, levels = c("a", "c", "t", "g")))
-        return(x)
-      }
-      cnt_nt <- as.data.frame(t(sapply(xx, lf)))
-      # count number of nucleotides from the 3'-end untill it finds the first g
-      gfree3 <- function(x) {
-        x <- tolower(x)
-        x <- strsplit(x, "")[[1]]
-        tfg <- x == "g"
-        if (sum(tfg) == 0) {
-          l3 <- NA
-        } else {
-          posg <- c(1:length(x))[tfg]
-          l3 <- length(x) - max(posg)
-        }
-        return(l3)
-      }
-      cnt_gfree3 <- sapply(xx, gfree3)
-      cnt_gfree3[cnt_gfree3 > 20] <- 20      #Set max to 20
-      cnt_gfree3[is.na(cnt_gfree3)] <- 20  #Set no g in ASO to 20
-      ## Calculate final score based on trained parameters and return result
-      calc_out <- round(
-        136.0430 - 3.1263 * cnt_nt$a - 5.1100 * cnt_nt$c -
-          4.7217 * cnt_nt$t - 10.1264 * cnt_nt$g + 1.3577 *
-          cnt_gfree3,
-        1
-      )
-      
-      return(as.numeric(calc_out))
+    # count the number of each nucleotide
+    lf <- function(x) {
+      x <- tolower(x)
+      x <- strsplit(x, "")[[1]]
+      x <- table(factor(x, levels = c("a", "c", "t", "g")))
+      return(x)
     }
+    cnt_nt <- as.data.frame(t(sapply(xx, lf)))
+    # count number of nucleotides from the 3'-end untill it finds the first g
+    gfree3 <- function(x) {
+      x <- tolower(x)
+      x <- strsplit(x, "")[[1]]
+      tfg <- x == "g"
+      if (sum(tfg) == 0) {
+        l3 <- NA
+      } else {
+        posg <- c(1:length(x))[tfg]
+        l3 <- length(x) - max(posg)
+      }
+      return(l3)
+    }
+    cnt_gfree3 <- sapply(xx, gfree3)
+    cnt_gfree3[cnt_gfree3 > 20] <- 20      #Set max to 20
+    cnt_gfree3[is.na(cnt_gfree3)] <- 20  #Set no g in ASO to 20
+    ## Calculate final score based on trained parameters and return result
+    calc_out <- round(
+      136.0430 - 3.1263 * cnt_nt$a - 5.1100 * cnt_nt$c -
+        4.7217 * cnt_nt$t - 10.1264 * cnt_nt$g + 1.3577 *
+        cnt_gfree3,
+      1
+    )
     
+    return(as.numeric(calc_out))
+  }
+  
     
   if (input$linux_input == TRUE) {
     # 2.5.1 Predict accessibility for an RNA target
@@ -190,122 +192,122 @@ function(input, output, session) {
   
   txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
-    # ----------------------------------- milestone 1 --------------------------
-    print("milestone1: loaded human database object")
+  # ----------------------------------- milestone 1 --------------------------
+  print("milestone1: loaded human database object")
+  
+  # Extract the genes
+  gdb_hsa <- genes(txdb_hsa)
+  
+  # Define the chromosomes to keep
+  chr_to_keep <- c(as.character(1:22), 'X', 'Y', 'MT')
+  
+  # Filtert Hsapiens zodat het alleen de aangegeven chromosomen pakt
+  Hsapiens@user_seqnames <- setNames(chr_to_keep, chr_to_keep)
+  Hsapiens@seqinfo <- Hsapiens@seqinfo[chr_to_keep]
+  
+  # Subset genes to keep only those on specified chromosomes
+  gdb_hsa <- gdb_hsa[seqnames(gdb_hsa) %in% chr_to_keep]
+  
+  # ----------------------------------- milestone 2 --------------------------
+  print("milestone2: Subsetted genes from specified chromosomes")
+  
+  # Get the sequences *
+  HS <- getSeq(Hsapiens, gdb_hsa)
     
-    # Extract the genes
-    gdb_hsa <- genes(txdb_hsa)
+  # ----------------------------------- milestone 3 --------------------------
+  print("milestone3: Saved human gene sequences")
+  # Target collect the pre-mRNA sequence
+  
+  # Define wanted Ensembl ID
+  ensembl_ID = input$ensemble_id_input
+  
+  # Retrieve a specific RNA target using the Ensembl ID
+  RNA_target = HS[names(HS) == ensembl_ID]
+  
+  
+  # ----------------------------------- milestone 4 --------------------------
+  print("milestone4: Saved input RNA target (ENSEMBL) information: \n")
+  print(RNA_target)
+  #filters on ensembl ID
+  target_ranges = gdb_hsa[names(gdb_hsa) == ensembl_ID]
+
+  
+  # Extracts the chromosome name for target range,extracts the start and end
+  # Position of the genomic region and note from which strand it is.
+  # Positive strand 1 ('+'), negative strand -1 ('-'), or unspecified 0 ('*').
+  chr_coord = c(
+    chr = as.numeric(as.character(seqnames(target_ranges))),
+    start = start(target_ranges),
+    end = end(target_ranges),
+    strand = ifelse(strand(target_ranges) == "+", 1, -1)
+  )
+  
+  # ----------------------------------- milestone 5 --------------------------
+  print("milestone5: Extracted chromosome coordinates of RNA target")
     
-    # Define the chromosomes to keep
-    chr_to_keep <- c(as.character(1:22), 'X', 'Y', 'MT')
+  # Set the width of rna_target as value L
+  l = width(RNA_target)
+  
+  # Note length of subsequence
+  oligo_lengths = input$oligo_length_range[1]:input$oligo_length_range[2]
+  
+  # Construct the dataframe
+  target_annotation = lapply(oligo_lengths, function(i) {
+    tibble(start = 1:(l - i + 1), length = i)
+  }) %>%
+    bind_rows() %>%
+    mutate(end = start + length - 1)
+  
+  # Adds "name" sequence to the dataframe
+  target_regions = DNAStringSet(RNA_target[[1]],
+                                start = target_annotation$start,
+                                width = target_annotation$length)
+  names(target_regions) = as.character(target_regions)
+  
+  target_annotation$name = names(target_regions)
+  
+  # ----------------------------------- milestone 6 --------------------------
+  print("milestone6: Enumerated all possible ASO target sequences")
+  prefilter <- nrow(target_annotation)
+  
+  target_annotation <- target_annotation %>%
+    filter(!grepl("^C", name))
+  
+  postfilter <- nrow(target_annotation)
+  removed <- prefilter - postfilter
+  
+  print("Filtering Oligo sequences ending with G.")
+  print(paste0("Rows before filtering: ", prefilter))
+  print(paste0("Rows after filtering: ", postfilter))
+  print(paste0("Filtering removed ", removed, " possible ASOs."))
+
+  # ----------------------------------- milestone 7 --------------------------
+  print("milestone 7: Prefiltered Oligo sequences ending with G")
+  
+  if (input$linux_input == TRUE) {
+    # 3.4 Estimate Transcript Accessibility for the RNA Target at Single-Nucleotide Resolution
+    accessibility = RNAplfold_R(RNA_target, u.in = max(oligo_lengths)) %>%
+      as_tibble() %>%
+      mutate(end = 1:l) %>%
+      gather(length, accessibility, -end) %>%
+      mutate(length = as.double(length))
     
-    # Filtert Hsapiens zodat het alleen de aangegeven chromosomen pakt
-    Hsapiens@user_seqnames <- setNames(chr_to_keep, chr_to_keep)
-    Hsapiens@seqinfo <- Hsapiens@seqinfo[chr_to_keep]
+    target_annotation = left_join(target_annotation, accessibility, by =
+                                    c('length', 'end'))
+    print("filtering accesibility")
     
-    # Subset genes to keep only those on specified chromosomes
-    gdb_hsa <- gdb_hsa[seqnames(gdb_hsa) %in% chr_to_keep]
-    
-    # ----------------------------------- milestone 2 --------------------------
-    print("milestone2: Subsetted genes from specified chromosomes")
-    
-    # Get the sequences *
-    HS <- getSeq(Hsapiens, gdb_hsa)
-    
-    # ----------------------------------- milestone 3 --------------------------
-    print("milestone3: Saved human gene sequences")
-    # Target collect the pre-mRNA sequence
-    
-    # Define wanted Ensembl ID
-    ensembl_ID = input$ensemble_id_input
-    
-    # Retrieve a specific RNA target using the Ensembl ID
-    RNA_target = HS[names(HS) == ensembl_ID]
-    
-    
-    # ----------------------------------- milestone 4 --------------------------
-    print("milestone4: Saved input RNA target (ENSEMBL) information: \n")
-    print(RNA_target)
-    #filters on ensembl ID
-    target_ranges = gdb_hsa[names(gdb_hsa) == ensembl_ID]
-    
-    
-    # Extracts the chromosome name for target range,extracts the start and end
-    # Position of the genomic region and note from which strand it is.
-    # Positive strand 1 ('+'), negative strand -1 ('-'), or unspecified 0 ('*').
-    chr_coord = c(
-      chr = as.numeric(as.character(seqnames(target_ranges))),
-      start = start(target_ranges),
-      end = end(target_ranges),
-      strand = ifelse(strand(target_ranges) == "+", 1, -1)
-    )
-    
-    # ----------------------------------- milestone 5 --------------------------
-    print("milestone5: Extracted chromosome coordinates of RNA target")
-    
-    # Set the width of rna_target as value L
-    l = width(RNA_target)
-    
-    # Note length of subsequence
-    oligo_lengths = input$oligo_length_range[1]:input$oligo_length_range[2]
-    
-    # Construct the dataframe
-    target_annotation = lapply(oligo_lengths, function(i) {
-      tibble(start = 1:(l - i + 1), length = i)
-    }) %>%
-      bind_rows() %>%
-      mutate(end = start + length - 1)
-    
-    # Adds "name" sequence to the dataframe
-    target_regions = DNAStringSet(RNA_target[[1]],
-                                  start = target_annotation$start,
-                                  width = target_annotation$length)
-    names(target_regions) = as.character(target_regions)
-    
-    target_annotation$name = names(target_regions)
-    
-    # ----------------------------------- milestone 6 --------------------------
-    print("milestone6: Enumerated all possible ASO target sequences")
     prefilter <- nrow(target_annotation)
-    
+    accessibility_cutoff <- input$numeric_input_c
     target_annotation <- target_annotation %>%
-      filter(!grepl("^C", name))
+      filter(accessibility > accessibility_cutoff)
     
     postfilter <- nrow(target_annotation)
     removed <- prefilter - postfilter
     
-    print("Filtering Oligo sequences ending with G.")
+    print(paste0("Filtering Oligo sequences with accissibility score > ", accessibility_cutoff))
     print(paste0("Rows before filtering: ", prefilter))
     print(paste0("Rows after filtering: ", postfilter))
     print(paste0("Filtering removed ", removed, " possible ASOs."))
-    
-    # ----------------------------------- milestone 7 --------------------------
-    print("milestone 7: Prefiltered Oligo sequences ending with G")
-    
-    if (input$linux_input == TRUE) {
-      # 3.4 Estimate Transcript Accessibility for the RNA Target at Single-Nucleotide Resolution
-      accessibility = RNAplfold_R(RNA_target, u.in = max(oligo_lengths)) %>%
-        as_tibble() %>%
-        mutate(end = 1:l) %>%
-        gather(length, accessibility, -end) %>%
-        mutate(length = as.double(length))
-      
-      target_annotation = left_join(target_annotation, accessibility, by =
-                                      c('length', 'end'))
-      print("filtering accesibility")
-      
-      prefilter <- nrow(target_annotation)
-      accessibility_cutoff <- input$numeric_input_c
-      target_annotation <- target_annotation %>%
-        filter(accessibility > accessibility_cutoff)
-      
-      postfilter <- nrow(target_annotation)
-      removed <- prefilter - postfilter
-      
-      print(paste0("Filtering Oligo sequences with accissibility score > ", accessibility_cutoff))
-      print(paste0("Rows before filtering: ", prefilter))
-      print(paste0("Rows after filtering: ", postfilter))
-      print(paste0("Filtering removed ", removed, " possible ASOs."))
     }
   
   # ----------------------------------- milestone 8 --------------------------
@@ -334,6 +336,43 @@ function(input, output, session) {
   
   # ----------------------------------- milestone 9 --------------------------
   print("milestone 9: Calculated toxicity score and filtering")
+  
+  # Define motif weights
+  motif_weights <- c(
+    CCAC = +0.3,
+    TCCC = +0.3,
+    ACTC = +0.2,
+    GCCA = +0.2,
+    CTCT = +0.1,
+    GGGG = -0.2,
+    ACTG = -0.2,
+    TAA  = -0.2,
+    CCGG = -0.1,
+    AAA  = -0.1
+  )
+  
+  motif_counts <- sapply(names(motif_weights), function(m) {
+    vcountPattern(m, target_annotation$oligo_seq)
+  })
+  
+  motif_scores <- motif_counts %*% motif_weights
+  
+  motif_scores <- round(motif_scores, 6)
+  
+  motif_result <- data.frame(
+    motif_counts,
+    motif_cor_score = motif_scores[, 1]
+  )
+  
+  # Add each motif count column to target_annotation
+  target_annotation <- cbind(
+    target_annotation,
+    motif_result
+  )
+  
+  
+  # ----------------------------------- milestone x --------------------------
+  print("milestone 9.5: Calculated motif correlation score")
   
   # Bereken aantal "cg"
   target_annotation$CGs = (target_annotation$length -
@@ -555,7 +594,7 @@ function(input, output, session) {
     mutate(distance = mismatches + deletions + insertions,
             gene_name = str_extract(line, "(?<=\\|)[^;]+")
     )
-  
+
   
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
@@ -625,32 +664,7 @@ function(input, output, session) {
   print("temp milestone")
   target_region_select <- target_regions
   
-  if (input$perfect_input == TRUE) {
-    target_region_select <- filter_function(
-      target_region_select,
-      input$numeric_input_a,
-      "gene_hits_pm",
-      input$dropdown_input_a
-    )
-  }
-  if (input$mismatch_input == TRUE) {
-    target_region_select <- filter_function(
-      target_region_select,
-      input$numeric_input_b,
-      "gene_hits_1mm",
-      input$dropdown_input_b
-    )
-  }
-  if (input$linux_input == TRUE) {
-    if (input$Accessibility_input == TRUE) {
-      target_region_select <- filter_function(
-        target_region_select,
-        input$numeric_input_c,
-        "accessibility",
-        input$dropdown_input_c
-      )
-    }
-  }
+
   if (input$polymorphism_input == TRUE) {
     if (input$Poly_input == TRUE) {
       target_region_select <- filter_function(
@@ -661,14 +675,7 @@ function(input, output, session) {
       )
     }
   }
-  if (input$tox_input == TRUE) {
-    target_region_select <- filter_function(
-      target_region_select,
-      input$numeric_input_e,
-      "tox_score",
-      input$dropdown_input_e
-    )
-  }
+
   if (input$Conserved_input == TRUE) {
     target_region_select <- filter(target_region_select, conserved_in_mmusculus == TRUE)
   }
@@ -687,49 +694,19 @@ function(input, output, session) {
     ) # Include a close button)
   }
   
-  # ----------------------------------- milestone 19 -------------------------
-  print("milestone19")
+  ## Split correlation motifs from dataframe
+  motif_results_cols <- names(motif_result)
+  motif_results_cols <- append(motif_results_cols, c('name', 'oligo_seq'))
+  motif_cols <- names(motif_weights)
   
-  # Get all unique starting positions in order
-  start_pos = sort(unique(target_region_select$start))
   
-  num_data_points <- length(start_pos)
-  
-  # ----------------------------------- milestone 19.1 -----------------------
-  print("milestone19.1")
-  
-  # Set amount of clusters
-  if (num_data_points > 1) {
-    K <- min(10, num_data_points - 1)
-  } else {
-    # Handle the case when there are not enough data points
-    K <- 1
-  }
-  
-  # ----------------------------------- milestone 19.2 -----------------------
-  print("milestone19.2")
-  
-  # Cluster the selected regions
-  cluster_tab = tibble(
-    start = start_pos,
-    cluster = clara(
-      x = start_pos,
-      k = K,
-      metric = 'euclidean',
-      pamLike = T,
-      samples = 100
-    )$clustering
-  )
-  
-  # ----------------------------------- milestone 20 -------------------------
-  print("milestone20")
-  
-  nucleobase_select = left_join(target_region_select, cluster_tab, by =
-                                  'start') %>%
-    group_by(cluster) %>%
-    sample_n(1) %>%
-    ungroup()
-  
+  # Motif_results including motif count after filtering
+  motif_results_filtered <- target_region_select %>%
+    select(all_of(motif_results_cols))
+ 
+  # Target annotation with just the correlation score
+  target_region_select <- target_region_select %>%
+    select(-all_of(motif_cols))
   # ----------------------------------- milestone 21 -------------------------
   print("milestone21")
   
@@ -741,126 +718,123 @@ function(input, output, session) {
       formatStyle(names(target_region_select), color = "black")
   })
   
-  output$results2 <- renderDataTable({
-    datatable(nucleobase_select,
-              rownames = FALSE,
-              selection = "single") %>%
-      formatStyle(names(nucleobase_select), color = "black")
-  })
-  
   # ----------------------------------- Fayes deel ---------------------------
   
   current_seq <- reactiveVal(NULL)
   current_mismatch <- reactiveVal(2)
   current_offtargets <- reactiveVal(NULL)
   cached_results <- reactiveVal(list())
+  
+  observeEvent(input$apply_mismatch, {
+    req(current_seq())
+    
+    mm  <- as.numeric(input$user_mismatch)
+    seq <- toupper(current_seq())
+    key <- paste0("mm", mm)
+    
+    current_mismatch(mm)
+    cache <- cached_results()
+    
+    if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
+      subset_df <- cache[[seq]][[key]]
+      
+    } else {
+      if (mm %in% c(0, 1, 2)) {
+        subset_df <- off_targets_total %>%
+          filter(toupper(name) == seq, `distance` <= mm)
         
-      compute_offtarget_accessibility <- function(df) {
-        if (input$linux_input != TRUE) return(df)
+      } else if (mm == 3) {
+        showNotification(
+          "Results loading",
+          type = "default",
+          duration = NULL,
+          # Notification stays until clicked away
+          closeButton = TRUE
+        )
         
-        for (i in seq_len(nrow(df))) {
-          if (df$distance[i] >= 2){
-            df$offtarget_accessibility[i] <- NA_real_
-            next
-          }
-          
-          offtarget_seq <- gsub("-", "", df$subject_seq[i])
-          l_ot <- nchar(offtarget_seq)
-          
-          snip_result <- acc_snippet(
-            begin_target  = df$start_target[i],
-            end_target    = df$end_target[i],
-            begin_snippet = df$snippet_start[i],
-            end_snippet   = df$snippet_end[i],
-            full_snippet  = df$snippet[i]
-          )
-          
-          l_snipseq <- nchar(snip_result$snippet_seq)
-          
-          df$offtarget_accessibility[i] <-
-            RNAplfold_R(
-              snip_result$snippet_seq,
-              u.in = l_ot
-            ) %>%
-            as_tibble() %>%
-            mutate(end = 1:l_snipseq) %>%
-            gather(length, accessibility, -end) %>%
-            mutate(length = as.integer(length)) %>%
-            filter(
-              length == l_ot,
-              (end - l_ot + 1) <= snip_result$target_end_internal,
-              end >= snip_result$target_start_internal
-            ) %>%
-            summarise(mean_accessibility = mean(accessibility, na.rm = TRUE)) %>%
-            pull(mean_accessibility)
-        }
+        new_res <- all_offt(seq, 3)
+        new_res$name   <- seq
+        new_res$length <- nchar(seq)
         
-        return(df)
+        subset_df <- new_res
       }
       
-      observeEvent(input$apply_mismatch, {
-        req(current_seq())
-        
-        seq <- toupper(current_seq())
-        mm  <- as.numeric(input$user_mismatch)
-        key <- paste0("mm", mm)
-        
-        current_mismatch(mm)
-        cache <- cached_results()
-        
-        if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
-          subset_df <- cache[[seq]][[key]]
-          
-        } else {
-          if (mm %in% c(0, 1, 2)) {
-            subset_df <- summary_server %>%
-              filter(toupper(name) == seq, mismatches <= mm)
-            
-          } else if (mm == 3) {
-            showNotification("Results loading", type = "default",
-                             duration = NULL, closeButton = TRUE)
-            new_res <- all_offt(seq, 3)
-            print("mm3 gedaan")
-            new_res$name   <- seq
-            new_res$length <- nchar(seq)
-            subset_df <- new_res
-          }
-          
-          subset_df <- compute_offtarget_accessibility(subset_df)
-          
-          if (is.null(cache[[seq]])) cache[[seq]] <- list()
-          cache[[seq]][[key]] <- subset_df
-          cached_results(cache)
-        }
-        
-        if (input$linux_input == TRUE) {
-          subset_df <- subset_df %>% 
-            relocate(offtarget_accessibility, .after = insertions)
-        }
-        
-        current_offtargets(subset_df)
-        
-        output$numb_offtargets <- renderText(
-          paste0("# off targets: ", nrow(subset_df))
-        )
-      })
-      
-      output$offtarget_results <- DT::renderDataTable({
-        req(current_offtargets())
-        datatable(current_offtargets(), rownames = FALSE)
-      })
-      
-      output$download_offtarget <- downloadHandler(
-        filename = function() {
-          paste(
-            'offtargets_', current_seq(), "_mismatches_", current_mismatch(),
-            "_", Sys.Date(), '.csv'
-          )
-        },
-        content = function(con) {
-          write.csv2(current_offtargets(), con, row.names = FALSE)
-        }
+      if (is.null(cache[[seq]]))
+        cache[[seq]] <- list()
+      cache[[seq]][[key]] <- subset_df
+      cached_results(cache)
+    }
+    
+    
+    current_offtargets(subset_df)
+    
+    output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
+  })
+
+  
+  output$offtarget_results <- DT::renderDataTable({
+    req(current_offtargets())
+    datatable(current_offtargets(), rownames = FALSE)
+  })
+  
+  output$download_offtarget <- downloadHandler(
+    filename = function() {
+      paste(
+        'offtargets_',
+        current_seq(),
+        "_mismatches_",
+        current_mismatch(),
+        "_",
+        Sys.Date(),
+        '.csv'
       )
+    },
+    content = function(con) {
+      data_offtarget <- current_offtargets()
+      req(data_offtarget)
+      write.csv2(data_offtarget, con, row.names = FALSE)
+    }
+  )
+  
+  # ----------------------------------- Proteinatlas/OMIM off-target search---
+  # Function for parsing OMIM and Protein atlast data
+  
+  
+  observeEvent(input$PAtlas_OMIM_search, {
+    offtargets <- current_offtargets()
+    View(offtargets)
+    req(offtargets)
+    offtargets <- offtargets %>%
+      filter(distance < 2) %>%
+      head(5)
+    ens_ID <- unique(offtargets$transcript)
+    
+    PAtlas_result_list <- lapply(ens_ID, function(tx) {
+      PA_parsed <- parse_PAtlas(tx, input$target_tissue)
+      mutate(PA_parsed, transcript = tx)
+    })
+    PAtlas_results <- bind_rows(PAtlas_result_list)
+    
+    offtargets <- offtargets %>%
+      left_join(PAtlas_results, by = c("transcript" = "transcript"))
+    
+    # OMIM, try/catch for when no OMIM key is in file
+    tryCatch({
+      gene_id <- unique(offtargets$gene_name)
+      
+      OMIM_results <- lapply(gene_id, OMIM_search) %>%
+        bind_rows()
+      
+      offtargets <- offtargets %>%
+        left_join(OMIM_results, by = c("gene_name" = "gene"))
+    }, error = function(e) {
+      message("OMIM search skipped: No OMIM key found in file or OMIM API unavailable")
+    })
+    
+    current_offtargets(offtargets)
+  })
+  
+  
   # ----------------------------------- Harrys deel --------------------------
   
   # String reverse function
@@ -1056,7 +1030,7 @@ function(input, output, session) {
           updateSelectInput(session, "user_mismatch", selected = 2)
           
           default_subset <- off_targets_total %>%
-            filter(toupper(name) == seq, `distance` <= 2)
+            filter(toupper(name) == seq, `distance` <= 1)
           
           current_offtargets(default_subset)
           
@@ -1143,34 +1117,36 @@ function(input, output, session) {
   
    # Collect the data, change the name for each gene tested
       output$Download_input <- downloadHandler(
-        
+
         filename = function() {
           current_date <- format(Sys.time(), "%Y-%m-%d %H-%M-%S")
           paste0("Result_output_", current_date, ".zip")
         },
-        
+
         content = function(file) {
           file1 <- tempfile(fileext = ".csv")
           file2 <- tempfile(fileext = ".csv")
-          
+
           write.csv(target_region_select(), file1, row.names = FALSE)
           write.csv(nucleobase_select(), file2, row.names = FALSE)
-          
+
           zip(file, c(file1, file2), flags = "-j")
         }
       )
-      
-      t2 <- Sys.time()
-      time <- t2 - t1
-      print(time)
-      showNotification(
-        "Script finished",
-        type = "default",
-        duration = NULL,
-        # Notification stays until clicked away
-        closeButton = TRUE
-      )
-      print("done")
-    }
+
+  t2 <- Sys.time()
+  time <- t2 - t1
+  print(time)
+  showNotification(
+    "Script finished",
+    type = "default",
+    duration = NULL,
+    # Notification stays until clicked away
+    closeButton = TRUE
+  )
+  print("done")
+  }
   })
 }
+
+

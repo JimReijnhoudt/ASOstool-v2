@@ -16,7 +16,7 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   url_col <- character()
 
   for (cond in conditions) {
-    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".json")
+    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".txt")
     
     mismatch_col <- c(mismatch_col, mismatch_conditions)
     strand_col <- c(strand_col, strands)
@@ -37,32 +37,55 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
 
 # Function to filter data based on the number of equal signs
 filter_data <- function(data, criterion) {
-  data_results <- data$results
+  start <- c('NM_', 'chr', 'NR_')
+  lines <- str_split(data, "\n")[[1]]
   
-  df_filtered <- data_results[
-    grepl("^(NM_|chr|NR_)", data_results$name) &
-      str_count(data_results$edit, "=") >= criterion, ]
+  line_col <- character()
+  equal_col <- integer()
+  mismatch_col <- integer()
+  ins_col <- integer()
+  del_col <- integer()
+  sub_col <- character()
+  query_col <- character()
   
-  if (nrow(df_filtered) == 0) return(data.frame())
-  
-  n <- nrow(df_filtered)
+  for (line in lines) {
+    if (any(str_starts(line, start))) {
+      aantal_equal <- str_count(line, "=")
+      if (aantal_equal >= criterion){
+        line_col <- c(line_col, line)
+        
+        equal_col <- c(equal_col, aantal_equal)
+        
+        parts <- strsplit(line, "\t")[[1]]
+        mm <- as.integer(parts[13])
+        # mm <- sum(as.integer(tail(parts, 2)))
+        mismatch_col <- c(mismatch_col, mm)
+        
+        del <- as.integer(parts[14])
+        ins <- as.integer(parts[15])
+        
+        del_col <- c(del_col, del)
+        ins_col <- c(ins_col, ins)
+        
+        subs <- as.character(parts[9])
+        quers <- as.character(parts[8])
+        
+        sub_col <- c(sub_col, subs)
+        query_col <- c(query_col, quers)
+      }
+    }
+  }
   
   df <- data.frame(
-    line = df_filtered$name,
-    equal_signs = str_count(df_filtered$edit, "="),
-    mismatches = df_filtered$mis,
-    deletions = df_filtered$del,
-    insertions = df_filtered$ins,
-    subject_seq = df_filtered$sbjct,
-    query_seq = df_filtered$query,
-    start_target = df_filtered$position,
-    end_target = df_filtered$position_end,
-    snippet = df_filtered$snippet,
-    snippet_start = df_filtered$snippet_pos,
-    snippet_end = df_filtered$snippet_end,
+    line = line_col,
+    equal_signs = equal_col,
+    mismatches = mismatch_col,
+    deletions = del_col, 
+    insertions = ins_col,
+    subject_seq = sub_col,
+    query_seq = query_col,
     stringsAsFactors = FALSE
   )
-  
   return(df)
 }
 
@@ -105,11 +128,6 @@ all_offt <- function(sequence, mismatches_allowed) {
     insertions = integer(),
     subject_seq = character(),
     query_seq = character(),
-    start_target = integer(),
-    end_target = integer(),
-    snippet = character(),
-    snippet_start = integer(),
-    snippet_end = integer(),
     stringsAsFactors = FALSE
   )
   
@@ -124,33 +142,26 @@ all_offt <- function(sequence, mismatches_allowed) {
     response <- GET(url)
     
     if (status_code(response) == 200) {
-      df_json <- fromJSON(
-        content(response, as = "text", encoding = "UTF-8"),
-        flatten = TRUE)
-      filtered_data_df <- filter_data(df_json, mismatches_allowed)
+      text_data <- content(response, "text", encoding = "UTF-8")
+      filtered_data_df <- filter_data(text_data, mismatches_allowed)
       all_df <- bind_rows(all_df, filtered_data_df)
     } else {
       print("Failed to fetch data.")
       next
     }
     
-    # if (nrow(all_df) == 0) {
-    #   all_df <- data.frame(
-    #     line = NULL,
-    #     equal_signs = NULL,
-    #     mismatches = NULL,
-    #     deletions = NULL, 
-    #     insertions = NULL,
-    #     subject_seq = NULL,
-    #     query_seq = NULL,
-    #     start_target = NULL,
-    #     end_target = NULL,
-    #     snippet = NULL,
-    #     snippet_start = NULL,
-    #     snippet_end = NULL,
-    #     stringsAsFactors = FALSE
-    #   )
-    # }
+    if (nrow(all_df) == 0) {
+      all_df <- data.frame(
+        line = NULL,
+        equal_signs = NULL,
+        mismatches = NULL,
+        deletions = NULL, 
+        insertions = NULL,
+        subject_seq = NULL,
+        query_seq = NULL,
+        stringsAsFactors = FALSE
+      )
+    }
   }
   
   # Divide the data frame by condition
