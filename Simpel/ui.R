@@ -388,21 +388,33 @@ ui <- fluidPage(
                  fluidRow("Run off-target tissue expression and OMIM disease search (may take some time)"),
                  
                  fluidRow(
-                   selectInput("target_tissue", "Select target tissue", choices = c("Brain",
-                                                                                    "Eye",
-                                                                                    "Endrocrine tissue",
-                                                                                    "Respiratory system",
-                                                                                    "Proximal digestive tract",
-                                                                                    "Gastrointestinal tract",
-                                                                                    "Liver & galbladder",
-                                                                                    "Pancreas",
-                                                                                    "Kidney & urinary bladder",
-                                                                                    "Male tissues",
-                                                                                    "Female tissues",
-                                                                                    "Muscle tissues",
-                                                                                    "Connective & soft tissues",
-                                                                                    "Skin",
-                                                                                    "Bone marrow & lymphoid tissues")),
+                   selectInput("target_tissue", label = tagList(
+                     "Select target tissue  ",
+                     tags$span(
+                       tags$img(src = "questionmark.png", height = "20px"),
+                       title = "For each off-target, tissue-specific expression data is retrieved from the Protein Atlas. This data, combined with the off-target information, is then used to query OMIM for associated diseases. Currently, the analysis supports the brain, eyes, and liver, with additional tissues planned as further developments become available.",
+                       `data-toggle` = "tooltip",
+                       style = "cursor: pointer;"
+                     )
+                   ),
+                   choices = c(
+                     "Brain",
+                     "Eye",
+                     "Endrocrine tissue",
+                     "Respiratory system",
+                     "Proximal digestive tract",
+                     "Gastrointestinal tract",
+                     "Liver & galbladder",
+                     "Pancreas",
+                     "Kidney & urinary bladder",
+                     "Male tissues",
+                     "Female tissues",
+                     "Muscle tissues",
+                     "Connective & soft tissues",
+                     "Skin",
+                     "Bone marrow & lymphoid tissues"
+                   )
+                   ),
                    actionButton("PAtlas_OMIM_search", "Run"))
           )
         ),
