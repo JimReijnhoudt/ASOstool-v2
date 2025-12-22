@@ -1079,6 +1079,8 @@ function(input, output, session) {
         current_mismatch(2)
         updateSelectInput(session, "user_mismatch", selected = 2)
         
+        mm <- current_mismatch()
+        
         key <- paste0("mm", mm)
         cache <- cached_results()
         
@@ -1087,7 +1089,7 @@ function(input, output, session) {
           
         } else {
           default_subset <- off_targets_total %>%
-            filter(toupper(name) == seq, `distance` <= 1)
+            filter(toupper(name) == seq, `distance` <= 2)
         }
         
         if (input$linux_input == TRUE) {
