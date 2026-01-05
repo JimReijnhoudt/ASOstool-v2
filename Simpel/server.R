@@ -187,9 +187,9 @@ function(input, output, session) {
   # txdb_hsa <- loadDb("txdb_hsa_biomart.db")
   getwd()
   # --- Harrys data location with script ---
-  #txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
+  txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
   
-  txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+  # txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
     
   # ----------------------------------- milestone 1 --------------------------
   print("milestone1: loaded human database object")
@@ -822,7 +822,35 @@ function(input, output, session) {
   
   output$offtarget_results <- DT::renderDataTable({
     req(current_offtargets())
-    datatable(current_offtargets(), rownames = FALSE)
+    user_cols <- c(
+      "gene_name",
+      "name",
+      "subject_seq",
+      "equal_signs",
+      "mismatches",
+      "deletions",
+      "insertions",
+      "distance",
+      "length"
+    )
+    
+    linux_cols <- c("offtarget_accessibility")
+    
+    user_end_cols <- c("transcript", "oe_lof")
+    
+    offtarget_table_user <- current_offtargets() %>%
+      select(any_of(c(
+        user_cols,
+        if (input$linux_input == TRUE) {
+          linux_cols
+        }
+        else {
+          NULL
+        },
+        user_end_cols
+      )))
+    
+    datatable(offtarget_table_user, rownames = FALSE)
   })
   
   output$download_offtarget <- downloadHandler(
