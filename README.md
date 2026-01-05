@@ -1,7 +1,6 @@
 # ERASOR - Erasmus ASO designer
 
 ## Table of contents
-***
 - [🧬 Introduction](#introduction)
 - [🎯 Quick start guide](#quick-start-guide)
 - [📋 Features](#features)
@@ -25,12 +24,10 @@
 
 
 ## 🧬 Introduction
-***
 Erasmus ASO designer (ERASOR) is an Antisense oligo sequence design tool for RNase H1 mediated mRNA degradation. The effectiveness of an ASO to silence a given gene is predicated on many different variables. ERASOR gives insight into what ASOs will and will not be worth testing in the lab. In silico prediction is much easier and faster than lab work. With this in mind, ERASOR is meant to be used as a first step in an ASO drug development pipeline.
 
 
 ## 🎯 Quick start guide
-***
 To get started quickly and get results after starting the shiny server follow these steps:
 
 1. To start enter the **ensemble ID** for the gene you want to target. 
@@ -45,7 +42,6 @@ To get started quickly and get results after starting the shiny server follow th
 The runtime of ERASOR may be 10-60 minutes. Runtime is heavily dependent on the selected oligo length and gene size and can take longer than 60 minutes if unfavorable settings are selected. 
 
 ## 📋 Features
-***
 
 ### ⚙️ Settings & Filters
 
@@ -139,7 +135,6 @@ This page predicts the optimal binding site for RNase H on the chosen target mRN
 This page displays the off-targets for the selected target mRNA sequence based on the allowed number of mismatches. For the complementary ASO sequence, it shows mismatches, deletions, insertions, protein name and additional information from GGGenome. The protein name is then given to Protein Atlas to retrieve the tissue expression data. This page also calculates the accessibility potential of each off-target.   
 
 ## Setup guide
-***
 ### 👥 Regular user setup (Shiny server only)
 
 This section is for end-users who only need to run the Shiny application. No RStudio or Git setup is required. 
