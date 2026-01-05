@@ -371,8 +371,8 @@ docker rm <container_id>
 | Start ssh-agent + ssh-add (If using password for SSH key)   | ❌             | ✔                     |
 | Run docker container                                        | ❌             | ✔                     |
 | Stop container                                              | ❌             | ✔                     |
-***
-### 📦 Dependencies
+
+## 📦 Dependencies
 | Component                                   | Version                | Source / Notes                                                                 |
 |---------------------------------------------|------------------------|-------------------------------------------------------------------------------|
 | **Base Image**                              |                        |                                                                               |
