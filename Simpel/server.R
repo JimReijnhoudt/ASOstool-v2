@@ -757,11 +757,9 @@ function(input, output, session) {
         mutate(length = as.integer(length)) %>%
         filter(
           length == l_ot,
-          (end - l_ot + 1) <= snip_result$target_end_internal,
-          end >= snip_result$target_start_internal
+          end == snip_result$target_end_internal
         ) %>%
-        summarise(mean_accessibility = mean(accessibility, na.rm = TRUE)) %>%
-        pull(mean_accessibility)
+        pull(accessibility)
     }
     
     return(df)
