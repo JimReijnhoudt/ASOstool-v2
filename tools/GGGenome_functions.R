@@ -37,15 +37,9 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
 
 # Function to filter data based on the number of equal signs
 filter_data <- function(data, criterion) {
-  data_results <- data$results
-  
-  df_filtered <- data_results[
-    grepl("^(NM_|chr|NR_)", data_results$name) &
-      str_count(data_results$edit, "=") >= criterion, ]
+  df_filtered <- data$results
   
   if (nrow(df_filtered) == 0 || is.null(df_filtered)) return(data.frame())
-  
-  n <- nrow(df_filtered)
   
   df <- data.frame(
     line = df_filtered$name,
@@ -68,22 +62,22 @@ filter_data <- function(data, criterion) {
 }
 
 
-# Function to fetch protein expression data from Protein Atlas
-fetch_protein_expression <- function(protein_name) {
-  base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
-  columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
-  full_url <- paste0(base_url, protein_name, columns)
-  response <- GET(full_url)
-  
-  if (status_code(response) == 200) {
-    text_data <- content(response, "text", encoding = "UTF-8")
-    df <- read_tsv(text_data)
-    return(df)
-  } else {
-    print(paste("Failed to fetch data for protein", protein_name))
-    return(NULL)
-  }
-}
+# # Function to fetch protein expression data from Protein Atlas
+# fetch_protein_expression <- function(protein_name) {
+#   base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
+#   columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
+#   full_url <- paste0(base_url, protein_name, columns)
+#   response <- GET(full_url)
+#   
+#   if (status_code(response) == 200) {
+#     text_data <- content(response, "text", encoding = "UTF-8")
+#     df <- read_tsv(text_data)
+#     return(df)
+#   } else {
+#     print(paste("Failed to fetch data for protein", protein_name))
+#     return(NULL)
+#   }
+# }
 
 
 all_offt <- function(sequence, mismatches_allowed) {
