@@ -21,13 +21,6 @@ source("../tools/Off_target_tissue.R")
 source("../tools/Off_target_OMIM_Api.R")
 source("../tools/Off_target_accessibility.R")
 
-# ----------------------------------- working directory ------------------------
-working_dir = getwd()
-setwd(working_dir)
-
-print("work directory set")
-
-
 function(input, output, session) {
   
   # ----------------------------------- Notifications UI -----------------------
@@ -181,15 +174,12 @@ function(input, output, session) {
   # ----------------------------------- Data setup ---------------------------
   # Store all human pre-mRNA sequences
   
-  # path = getwd()
-  
-  # path <- "C:/Users/fayef/Documents/BI/BI3/periode_1/XEXT/ASOstool-v2"
-  # txdb_hsa <- loadDb("txdb_hsa_biomart.db")
-  getwd()
-  # --- Harrys data location with script ---
-  txdb_hsa <- loadDb("../txdb_hsa_biomart.db")
-  
-  # txdb_hsa <- loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+  txdb_hsa <- tryCatch({
+    loadDb("/opt/ASOstool-v2/txdb_hsa_biomart.db")
+  }, error = function(e) {
+    message("Primary txdb path not found, trying local path...")
+    loadDb("../txdb_hsa_biomart.db")
+  })
     
   # ----------------------------------- milestone 1 --------------------------
   print("milestone1: loaded human database object")
@@ -267,18 +257,7 @@ function(input, output, session) {
   
   # ----------------------------------- milestone 6 --------------------------
   print("milestone6: Enumerated all possible ASO target sequences")
-  prefilter <- nrow(target_annotation)
   
-  target_annotation <- target_annotation %>%
-    filter(!grepl("^C", name))
-  
-  postfilter <- nrow(target_annotation)
-  removed <- prefilter - postfilter
-  
-  print("Filtering Oligo sequences ending with G.")
-  print(paste0("Rows before filtering: ", prefilter))
-  print(paste0("Rows after filtering: ", postfilter))
-  print(paste0("Filtering removed ", removed, " possible ASOs."))
 
   # ----------------------------------- milestone 7 --------------------------
   print("milestone 7: Prefiltered Oligo sequences ending with G")
@@ -293,21 +272,7 @@ function(input, output, session) {
     
     target_annotation = left_join(target_annotation, accessibility, by =
                                     c('length', 'end'))
-    print("filtering accesibility")
     
-    prefilter <- nrow(target_annotation)
-    accessibility_cutoff <- input$numeric_input_c
-    target_annotation <- target_annotation %>%
-      filter(accessibility > accessibility_cutoff)
-    
-    postfilter <- nrow(target_annotation)
-    removed <- prefilter - postfilter
-    
-    print(paste0("Filtering Oligo sequences with accissibility score > ", accessibility_cutoff))
-    print(paste0("Rows before filtering: ", prefilter))
-    print(paste0("Rows after filtering: ", postfilter))
-    print(paste0("Filtering removed ", removed, " possible ASOs."))
-    }
   
   # ----------------------------------- milestone 8 --------------------------
   print("milestone 8: Calculated ViennaRNA accessibility score and filtering")
@@ -320,18 +285,7 @@ function(input, output, session) {
   # Toxicity score acute neurotox score (desired >70)
   target_annotation$tox_score = calculate_acute_neurotox(target_annotation$oligo_seq)
   
-  prefilter <- nrow(target_annotation)
-  tox_score_cutoff <- input$numeric_input_e
-  target_annotation <- target_annotation %>%
-    filter(tox_score > tox_score_cutoff)
   
-  postfilter <- nrow(target_annotation)
-  removed <- prefilter - postfilter
-  
-  print(paste0("Filtering Oligo sequences with toxicity score > ", tox_score_cutoff))
-  print(paste0("Rows before filtering: ", prefilter))
-  print(paste0("Rows after filtering: ", postfilter))
-  print(paste0("Filtering removed ", removed, " possible ASOs."))
   
   # ----------------------------------- milestone 9 --------------------------
   print("milestone 9: Calculated toxicity score and filtering")
@@ -403,7 +357,7 @@ function(input, output, session) {
           values =
             ortho_ENS$mmusculus_homolog_ensembl_gene,
           mart = martMM)$gene_exon_intron)
-
+  }
   
   # ----------------------------------- milestone 12 --------------------------
   print("milestone 12: ")
@@ -524,15 +478,136 @@ function(input, output, session) {
   }
   # ----------------------------------- milestone 19 -----------------------
   print("milestone 19: Calculated secondary and duplex energy of ASO seq")
-
+  
+  unfiltered_total_data <- target_annotation
+  
+  nseq_prefilter <- nrow(target_annotation)
+  
+  nseq_ending_G <- nseq_prefilter - nrow(target_annotation %>%
+                          filter(!grepl("^C", name))
+                        )
+  
+  nseq_toxscore <- nseq_prefilter - nrow(filter_function(target_annotation, input$numeric_input_e, "tox_score", input$dropdown_input_e))
+  nseq_pmfreq <- nseq_prefilter - nrow(filter_function(target_annotation, input$numeric_input_d, "PM_max_freq", input$dropdown_input_d))
+  
+  nseq_accessible <- if (input$linux_input == TRUE) {
+    nseq_accessible <- nseq_prefilter - nrow(filter_function(target_annotation, input$numeric_input_c, "accessibility", input$dropdown_input_c))
+  } else {
+    NA_integer_
+  }
+  
+  filter_numbers <- tibble(
+    metric = c(
+      "Prefiltered",
+      "ASO ending with G",
+      "Tox score",
+      "PM frequency",
+      "Accessibility"
+      ),
+    count = c(
+      nseq_prefilter,
+      nseq_ending_G,
+      nseq_toxscore,
+      nseq_pmfreq,
+      nseq_accessible
+    )
+  )
+  
+  output$unfiltered_results_table <- renderDT ({
+    datatable(
+      filter_numbers,
+      rownames = FALSE,
+      options = list(dom = "t", ordering = FALSE),
+      class = "compact stripe"
+    )
+  })
+  
+  # ----------------------------------- milestone ---------------------------
+  
+  ##### FILTERING ######
+  
+  ta <- target_annotation  # startdataset
+  
+  # 1) ASO ending with G filter
+  if (isTRUE(input$ASO_ending_G)) {
+    ta_prev <- ta
+    ta <- ta %>% filter(!grepl("^C", name))
+    
+    if (nrow(ta) == 0) {
+      ta <- ta_prev
+      message("Filter 'ASO ending with G' removed all rows; reverting to previous dataset.")
+      showNotification("Filter 'ASO ending with G' removed all rows; reverting to previous dataset.", type = "warning")
+    }
+  }
+  
+  # 2) tox_score filter
+  if (isTRUE(input$tox_input)) {
+    ta_prev <- ta
+    ta <- filter_function(ta, input$numeric_input_e, "tox_score", input$dropdown_input_e)
+    
+    if (nrow(ta) == 0) {
+      ta <- ta_prev
+      message("Filter 'tox_score' removed all rows; reverting to previous dataset.")
+      showNotification("Filter 'tox_score' removed all rows; reverting to previous dataset.", type = "warning")
+    }
+  }
+  
+  # 3) accessibility filter (alleen als linux + checkbox aanstaan)
+  if (isTRUE(input$linux_input) && isTRUE(input$Accessibility_input)) {
+    ta_prev <- ta
+    ta <- filter_function(ta, input$numeric_input_c, "accessibility", input$dropdown_input_c)
+    
+    if (nrow(ta) == 0) {
+      ta <- ta_prev
+      message("Filter 'accessibility' removed all rows; reverting to previous dataset.")
+      showNotification("Filter 'accessibility' removed all rows; reverting to previous dataset.", type = "warning")
+    }
+  }
+  
+  # 4) polymorphism NA->0 (geen filter; alleen transform)
+  if (isTRUE(input$polymorphism_input)) {
+    ta <- ta %>%
+      mutate(across(c(PM_max_freq, PM_tot_freq, PM_count), ~ tidyr::replace_na(., 0.0)))
+  }
+  
+  # 5) polymorphism frequency filter
+  if (isTRUE(input$polymorphism_input) && isTRUE(input$Poly_input)) {
+    ta_prev <- ta
+    ta <- filter_function(ta, input$numeric_input_d, "PM_tot_freq", input$dropdown_input_d)
+    
+    if (nrow(ta) == 0) {
+      ta <- ta_prev
+      message("Filter 'PM_tot_freq' removed all rows; reverting to previous dataset.")
+      showNotification("Filter 'PM_tot_freq' removed all rows; reverting to previous dataset.", type = "warning")
+    }
+  }
+  
+  # 6) conserved filter
+  if (isTRUE(input$Conserved_input)) {
+    ta_prev <- ta
+    ta <- ta %>% filter(conserved_in_mmusculus == TRUE)
+    
+    if (nrow(ta) == 0) {
+      ta <- ta_prev
+      message("Filter 'conserved_in_mmusculus' removed all rows; reverting to previous dataset.")
+      showNotification("Filter 'conserved_in_mmusculus' removed all rows; reverting to previous dataset.", type = "warning")
+    }
+  }
+  
+  target_annotation <- ta
+  
+  View(target_annotation)
+  
+  # ----------------------------------- milestone 19 -----------------------
+  print("milestone 19: Calculated secondary and duplex energy of ASO seq")
+  
   
   ###################count the number of pre-mRNA transcripts with a perfect match 
 
   #this part will take some time to run...
   uni_tar = dplyr::select(target_annotation, name, length)%>%
     unique() %>%
-    split(.,.$length) %>%
-    head(10)
+    split(.,.$length)
   
   uni_tar = lapply(uni_tar, function(X){
     dict0 = PDict(X$name, max.mismatch = 0)
@@ -560,28 +635,37 @@ function(input, output, session) {
   target_annotation = left_join(target_annotation, uni_tar, by = c('name', 'length'))
   
   prefilter <- nrow(target_annotation)
-  target_annotation <- target_annotation %>%
+  target_annotation_filtered <- target_annotation %>%
     filter(
       gene_hits_pm < input$numeric_input_a,
       gene_hits_1mm < input$numeric_input_b
     )
 
-  postfilter <- nrow(target_annotation)
+  
+  postfilter <- nrow(target_annotation_filtered)
   removed <- prefilter - postfilter
 
   print(paste0("Filtering Oligo sequences with perfect match > ", input$numeric_input_a, " and 1 mismatch > ", input$numeric_input_b))
   print(paste0("Rows before filtering: ", prefilter))
   print(paste0("Rows after filtering: ", postfilter))
   print(paste0("Filtering removed ", removed, " possible ASOs."))
-  
+  if (nrow(target_annotation_filtered) != 0){
+    target_annotation <- target_annotation_filtered
+  } else{
+    print("Filtering off-targets resulted in no hits. Continuing with unfiltered off-target data")
+    showNotification("Filter 'off-targets' removed all rows; reverting.", type = "warning")
+  }
+
   # ----------------------------------- milestone 21 -----------------------
   print("milestone 21: Filtered ASOs with too many off targets")
   
   # Count the number of pre-mRNA transcripts with a perfect match
   # This part will take some time to run...
   
+  View(target_annotation)
+  
   summary_server <- target_annotation %>%
-    head(2) %>% # For quick off-target testing, use head here
+    # head(2) %>% # For quick off-target testing, use head here
     mutate(results = map2(name, length, ~ {
       res <- all_offt(.x, 2)
       res$name <- .x
@@ -592,8 +676,8 @@ function(input, output, session) {
     bind_rows() %>%
     mutate(distance = mismatches + deletions + insertions,
             gene_name = str_extract(line, "(?<=\\|)[^;]+")
-    )
-
+    ) %>%
+    distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
   
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
@@ -615,8 +699,6 @@ function(input, output, session) {
   
   off_targets_total = left_join(summary_server, gnomad_df, by = c('gene_name' = 'gene'))
 
-  View(off_targets_total)
-  
   # ----------------------------------- milestone 22 -------------------------
   print("milestone 22")
   
@@ -632,6 +714,7 @@ function(input, output, session) {
 
   # 2. Per name de laagste oe_lof score bepalen
   oe_lof_min <- off_targets_total %>%
+    filter(distance <= 1) %>%
     group_by(name) %>%
     summarise(min_oe_lof = min(oe_lof, na.rm = TRUE), .groups = "drop")
 
@@ -643,46 +726,41 @@ function(input, output, session) {
   target_annotation <- target_annotation %>%
     left_join(off_summary, by = c("name" = "name"))
 
-  View(target_annotation)
   # ----------------------------------- milestone 22 -------------------------
   print("milestone 22")
   
+  target_annotation <- target_annotation %>%
+    mutate(
+      off_target_score =
+        1    * n_distance_0 +
+        0.3  * n_distance_1 +
+        0.02 * n_distance_2
+    )
+  
+  # ----------------------------------- milestone 23 -------------------------
+  print("milestone 23")
   
   
-  target_regions <- target_annotation
+  ## Split correlation motifs from dataframe
+  motif_results_cols <- names(motif_result)
+  motif_results_cols <- append(motif_results_cols, c('name', 'oligo_seq'))
+  motif_cols <- names(motif_weights)
   
-  # Run the filtering
-  if (input$polymorphism_input == TRUE) {
-    target_regions <- target_regions %>%
-      mutate(across(
-        c(PM_max_freq, PM_tot_freq, PM_count),
-        ~ replace_na(., 0.0)
-      ))
-  }
   
-  print("temp milestone")
-  target_region_select <- target_regions
-  
-
-  if (input$polymorphism_input == TRUE) {
-    if (input$Poly_input == TRUE) {
-      target_region_select <- filter_function(
-        target_region_select,
-        input$numeric_input_d,
-        "PM_tot_freq",
-        input$dropdown_input_d
-      )
-    }
-  }
-
-  if (input$Conserved_input == TRUE) {
-    target_region_select <- filter(target_region_select, conserved_in_mmusculus == TRUE)
-  }
+  # Motif_results including motif count after filtering
+  motif_results_filtered <- target_annotation %>%
+    select(all_of(motif_results_cols))
+ 
+  # Target annotation with just the correlation score
+  target_annotation <- target_annotation %>%
+    select(-all_of(motif_cols))
+  # ----------------------------------- milestone 21 -------------------------
+  print("milestone21")
   
   # Check if the filtered result is empty
-  if (nrow(target_region_select) == 0) {
+  if (nrow(target_annotation) == 0) {
     # If empty, return the original target_regions
-    target_region_select <- target_regions
+    target_annotation <- unfiltered_total_data
     print("No results after filtering, exporting unfiltered list")
     showNotification(
       "No results after filtering, exporting unfiltered list",
@@ -693,28 +771,23 @@ function(input, output, session) {
     ) # Include a close button)
   }
   
-  ## Split correlation motifs from dataframe
-  motif_results_cols <- names(motif_result)
-  motif_results_cols <- append(motif_results_cols, c('name', 'oligo_seq'))
-  motif_cols <- names(motif_weights)
-  
-  
-  # Motif_results including motif count after filtering
-  motif_results_filtered <- target_region_select %>%
-    select(all_of(motif_results_cols))
- 
-  # Target annotation with just the correlation score
-  target_region_select <- target_region_select %>%
-    select(-all_of(motif_cols))
-  # ----------------------------------- milestone 21 -------------------------
-  print("milestone21")
   
   # Render the tables.
   output$results1 <- renderDataTable({
-    datatable(target_region_select,
-              rownames = FALSE,
-              selection = "single") %>%
-      formatStyle(names(target_region_select), color = "black")
+    req(target_annotation)
+    
+    df <- target_annotation
+    ws_col <- which(names(df) == "off_target_score") - 1  # DT gebruikt 0-based index
+    
+    datatable(
+      df,
+      rownames = FALSE,
+      selection = "single",
+      options = list(
+        order = list(list(ws_col, "asc"))
+      )
+    ) %>%
+      formatStyle(names(df), color = "black")
   })
   
   # ----------------------------------- Fayes deel ---------------------------
@@ -795,8 +868,24 @@ function(input, output, session) {
         new_res <- all_offt(seq, 3)
         new_res$name   <- seq
         new_res$length <- nchar(seq)
+        new_res <- new_res %>%
+          mutate(distance = mismatches + deletions + insertions,
+                 gene_name = str_extract(line, "(?<=\\|)[^;]+")
+          ) %>%
+            distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
         
-        subset_df <- new_res
+        tmp <- tempfile(fileext = ".bgz")
+        
+        download.file(
+          url <- "https://storage.googleapis.com/gcp-public-data--gnomad/release/2.1.1/constraint/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz", 
+          destfile = tmp,
+          mode = "wb"
+        )
+        gnomad_df <- read_tsv(tmp, show_col_types = FALSE,
+                              col_select = c(gene, transcript, oe_lof))
+        unlink(tmp)
+        
+        subset_df = left_join(new_res, gnomad_df, by = c('gene_name' = 'gene'))
       }
       
       subset_df <- compute_offtarget_accessibility(subset_df)
@@ -811,44 +900,52 @@ function(input, output, session) {
       subset_df <- subset_df %>% 
         relocate(offtarget_accessibility, .after = insertions)
     }
-    
     current_offtargets(subset_df)
     
     output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
   })
 
-  
   output$offtarget_results <- DT::renderDataTable({
     req(current_offtargets())
-    user_cols <- c(
-      "gene_name",
-      "name",
-      "subject_seq",
-      "equal_signs",
-      "mismatches",
-      "deletions",
-      "insertions",
-      "distance",
-      "length"
+    
+    df <- current_offtargets()
+    
+    df_view <- df %>%
+      select(-c(
+        line,
+        subject_seq,
+        query_seq,
+        start_target,
+        end_target,
+        snippet,
+        snippet_start,
+        snippet_end,
+        name
+      )) %>%
+      select(
+        gene_name,
+        transcript,
+        match_string,
+        length,
+        matches,
+        mismatches,
+        deletions,
+        insertions,
+        distance,
+        offtarget_accessibility,
+        oe_lof,
+        everything()
+      )
+    
+    distance_col <- which(names(df_view) == "distance") - 1  # DT is 0-based
+    
+    DT::datatable(
+      df_view,
+      rownames = FALSE,
+      options = list(
+        order = list(list(distance_col, "asc"))
+      )
     )
-    
-    linux_cols <- c("offtarget_accessibility")
-    
-    user_end_cols <- c("transcript", "oe_lof")
-    
-    offtarget_table_user <- current_offtargets() %>%
-      select(any_of(c(
-        user_cols,
-        if (input$linux_input == TRUE) {
-          linux_cols
-        }
-        else {
-          NULL
-        },
-        user_end_cols
-      )))
-    
-    datatable(offtarget_table_user, rownames = FALSE)
   })
   
   output$download_offtarget <- downloadHandler(
@@ -873,36 +970,73 @@ function(input, output, session) {
   # ----------------------------------- Proteinatlas/OMIM off-target search---
   # Function for parsing OMIM and Protein atlast data
   
+  PAtlas_cache <- reactiveVal(tibble())
+  
+  OMIM_cache <- reactiveVal(tibble())
+  
   
   observeEvent(input$PAtlas_OMIM_search, {
     offtargets <- current_offtargets()
-    View(offtargets)
     req(offtargets)
-    offtargets <- offtargets %>%
-      filter(distance < 2) %>%
-      head(5)
-    ens_ID <- unique(offtargets$transcript)
     
-    PAtlas_result_list <- lapply(ens_ID, function(tx) {
-      PA_parsed <- parse_PAtlas(tx, input$target_tissue)
-      mutate(PA_parsed, transcript = tx)
-    })
-    PAtlas_results <- bind_rows(PAtlas_result_list)
+    offtargets_d2 <- offtargets %>%
+      filter(distance < 2)
+    
+    ens_ID <- unique(offtargets_d2$transcript)
+    ens_ID <- ens_ID[!is.na(ens_ID) & ens_ID != ""]
+    PAtlas_results <- tibble()
+    pa_cached <- PAtlas_cache()
+    cached_tx <- if (nrow(pa_cached) == 0 || !"transcript" %in% names(pa_cached)) character(0) else unique(pa_cached$transcript)
+    new_tx <- setdiff(ens_ID, cached_tx)
+    if (length(new_tx) > 0) {
+      PAtlas_result_list <- lapply(new_tx, function(tx) {
+        PA_parsed <- parse_PAtlas(tx, input$target_tissue)
+        mutate(PA_parsed, transcript = tx)
+      })
+      PAtlas_results <- bind_rows(PAtlas_result_list)
+    }
+    
+    PAtlas_updated <- bind_rows(pa_cached, PAtlas_results) %>%
+      distinct(transcript, .keep_all = TRUE)
+    PAtlas_cache(PAtlas_updated)
+    
+    cols_to_add <- setdiff(names(PAtlas_updated), names(offtargets))
+    cols_to_add <- union("transcript", cols_to_add)
     
     offtargets <- offtargets %>%
-      left_join(PAtlas_results, by = c("transcript" = "transcript"))
+      left_join(PAtlas_updated %>%
+                  select(all_of(cols_to_add)), 
+                by = c("transcript" = "transcript"))
     
     # OMIM, try/catch for when no OMIM key is in file
     tryCatch({
-      gene_id <- unique(offtargets$gene_name)
+      gene_id <- unique(offtargets_d2$gene_name)
+      gene_id <- gene_id[!is.na(gene_id) & gene_id != ""]
       
-      OMIM_results <- lapply(gene_id, OMIM_search) %>%
-        bind_rows()
+      omim_cached <- OMIM_cache()
+      cached_gene <- if (nrow(omim_cached) == 0 || !"gene" %in% names(omim_cached)) character(0) else unique(omim_cached$gene)
+      
+      new_genes <- setdiff(gene_id, cached_gene)
+      OMIM_results <- tibble()
+      if (length(new_genes) > 0) {
+        OMIM_results <- lapply(new_genes, OMIM_search) %>%
+          bind_rows()}
+      
+      OMIM_updated <- bind_rows(omim_cached, OMIM_results) %>%
+        distinct(gene, .keep_all = TRUE)
+      
+      OMIM_cache(OMIM_updated)
+      
+      cols_to_add <- setdiff(names(OMIM_updated), names(offtargets))
+      cols_to_add <- union("gene", cols_to_add)
       
       offtargets <- offtargets %>%
-        left_join(OMIM_results, by = c("gene_name" = "gene"))
+        left_join(OMIM_updated %>%
+                    select(all_of(cols_to_add)),
+                  by = c("gene_name" = "gene"))
     }, error = function(e) {
       message("OMIM search skipped: No OMIM key found in file or OMIM API unavailable")
+      offtargets
     })
     
     current_offtargets(offtargets)
@@ -1129,6 +1263,7 @@ function(input, output, session) {
         cached_results(cache)
         
         # results
+        default_subset[order(default_subset$distance), ]
         current_offtargets(default_subset)
         
         output$offtarget_title <- renderText(
@@ -1184,7 +1319,7 @@ function(input, output, session) {
     output = output,
     session = session,
     table_id = "results1",
-    table_data = target_region_select,
+    table_data = target_annotation,
     off_targets_total = off_targets_total,
     selected_target = selected_target,
     oligo_sequence = oligo_sequence,
@@ -1213,23 +1348,44 @@ function(input, output, session) {
   )
   
   # ----------------------------------- End of script ------------------------
+  #unfiltered data downloader
+  output$Download_unfiltered <- downloadHandler(
+    
+    filename = function() {
+      paste0(
+        "unfiltered_data_results_",
+        format(Sys.time(), "%Y%m%d_%H%M%S"),
+        ".csv"
+      )
+    },
+    
+    content = function(file) {
+      write.csv(
+        unfiltered_total_data,
+        file,
+        row.names = FALSE
+      )
+    }
+  )
   
-   # Collect the data, change the name for each gene tested
-      output$Download_input <- downloadHandler(
+  
+   # Filtered data downloader
+      output$Download_filtered <- downloadHandler(
 
         filename = function() {
-          current_date <- format(Sys.time(), "%Y-%m-%d %H-%M-%S")
-          paste0("Result_output_", current_date, ".zip")
+          paste0(
+            "Filtered_data_results_",
+            format(Sys.time(), "%Y%m%d_%H%M%S"),
+            ".csv"
+          )
         },
-
+        
         content = function(file) {
-          file1 <- tempfile(fileext = ".csv")
-          file2 <- tempfile(fileext = ".csv")
-
-          write.csv(target_region_select(), file1, row.names = FALSE)
-          write.csv(nucleobase_select(), file2, row.names = FALSE)
-
-          zip(file, c(file1, file2), flags = "-j")
+          write.csv(
+            target_annotation,
+            file,
+            row.names = FALSE
+          )
         }
       )
 
@@ -1245,7 +1401,8 @@ function(input, output, session) {
   )
   print("done")
   }
-  })
+  }
+  )
 }
 
 
