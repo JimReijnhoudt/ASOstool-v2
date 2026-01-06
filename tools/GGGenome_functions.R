@@ -43,13 +43,14 @@ filter_data <- function(data, criterion) {
     grepl("^(NM_|chr|NR_)", data_results$name) &
       str_count(data_results$edit, "=") >= criterion, ]
   
-  if (nrow(df_filtered) == 0) return(data.frame())
+  if (nrow(df_filtered) == 0 || is.null(df_filtered)) return(data.frame())
   
   n <- nrow(df_filtered)
   
   df <- data.frame(
     line = df_filtered$name,
-    equal_signs = str_count(df_filtered$edit, "="),
+    match_string = df_filtered$edit,
+    matches = str_count(df_filtered$edit, "="),
     mismatches = df_filtered$mis,
     deletions = df_filtered$del,
     insertions = df_filtered$ins,
@@ -100,7 +101,8 @@ all_offt <- function(sequence, mismatches_allowed) {
   # Initialize an empty data frame that will be filled with gggenome data
   all_df <- data.frame(
     line = character(),
-    equal_signs = integer(),
+    match_string = character(),
+    matches = integer(),
     mismatches = integer(),
     deletions = integer(), 
     insertions = integer(),
@@ -138,7 +140,8 @@ all_offt <- function(sequence, mismatches_allowed) {
     if (nrow(all_df) == 0) {
       all_df <- data.frame(
         line = NULL,
-        equal_signs = NULL,
+        match_string = NULL,
+        matches = NULL,
         mismatches = NULL,
         deletions = NULL, 
         insertions = NULL,
