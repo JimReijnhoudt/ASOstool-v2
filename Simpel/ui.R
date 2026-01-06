@@ -74,6 +74,24 @@ ui <- fluidPage(
           value = TRUE
         ),
         checkboxInput(
+          "ASO_ending_G",
+          label = tagList(
+            "Filter ASO ending in G ",
+            tags$span(
+              tags$img(
+                src = "questionmark.png",
+                height = "20px",
+                style = "margin-bottom: 3px;"
+              ),
+              title = "Filters ASO sequences ending with G. These sequences could lead to unwanted toxic effects. ",
+              `data-placement` = "right",
+              `data-toggle` = "tooltip",
+              style = "cursor: pointer;"
+            )
+          ),
+          value = FALSE
+        ),
+        checkboxInput(
           "Conserved_input",
           label = tagList(
             "Conserved & Orthology ",
@@ -89,7 +107,7 @@ ui <- fluidPage(
               style = "cursor: pointer;"
             )
           ),
-          value = TRUE
+          value = FALSE
         ),
         checkboxInput(
           "linux_input",
@@ -127,7 +145,7 @@ ui <- fluidPage(
           ),
           min = 0,
           max = 50,
-          value = c(14, 20)
+          value = c(19, 20)
         ),
         fluidRow(
           column(
@@ -289,10 +307,19 @@ ui <- fluidPage(
           style = "margin-top: 20px; font-size: 18px;"
         ),
         hr(),
-        downloadButton("Download_input", "Download Results"),
+        fluidRow(
+          column(6,
+                 p("This table shows the number of ASOs that didn't meet filtering criterea."),
+                 DTOutput("unfiltered_results_table")
+                ),
+          column(2,
+                 p("Download unfiltered results without off-target search here: "),
+                 downloadButton("Download_unfiltered", "Download Unfiltered Results")
+               )),
         hr(),
         DT::dataTableOutput('results1'),
-        DT::dataTableOutput('results2')
+        hr(),
+        downloadButton("Download_filtered", "Download Filtered Results"),
       ),
       
       tabPanel(
