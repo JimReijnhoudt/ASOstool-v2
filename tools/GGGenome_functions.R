@@ -39,7 +39,9 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
 filter_data <- function(data, criterion) {
   df_filtered <- data$results
   
-  if (nrow(df_filtered) == 0 || is.null(df_filtered)) return(data.frame())
+  if (is.null(df_filtered) || !is.data.frame(df_filtered) || nrow(df_filtered) == 0) {
+    return(data.frame())
+  }
   
   df <- data.frame(
     line = df_filtered$name,

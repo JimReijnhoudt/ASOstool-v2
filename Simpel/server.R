@@ -665,7 +665,7 @@ function(input, output, session) {
   View(target_annotation)
   
   summary_server <- target_annotation %>%
-    # head(2) %>% # For quick off-target testing, use head here
+    head(2) %>% # For quick off-target testing, use head here
     mutate(results = map2(name, length, ~ {
       res <- all_offt(.x, 2)
       res$name <- .x
@@ -678,6 +678,8 @@ function(input, output, session) {
             gene_name = str_extract(line, "(?<=\\|)[^;]+")
     ) %>%
     distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
+  
+  View(summary_server, title = "Summary Server Debug")
   
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
@@ -705,6 +707,7 @@ function(input, output, session) {
   dist_counts <- off_targets_total %>%
     group_by(name, distance) %>%
     summarise(n_distance = n(), .groups = "drop") %>%
+    complete(name, distance = 0:2, fill = list(n_distance = 0)) %>%
     mutate(distance = paste0("n_distance_", distance)) %>%  # bijv. n_distance_0, n_distance_1
     pivot_wider(
       names_from  = distance,
@@ -721,11 +724,17 @@ function(input, output, session) {
   # 3. Deze twee samenvattingen samenvoegen tot één tabel per name
   off_summary <- dist_counts %>%
     left_join(oe_lof_min, by = "name")
+  
+  print(colnames(dist_counts))
+  
+  print(table(off_targets_total$distance))
+  
+  print(head(off_targets_total))
 
   # 4. Met left_join koppelen aan target_annotation op oligo_seq = name
   target_annotation <- target_annotation %>%
     left_join(off_summary, by = c("name" = "name"))
-
+  
   # ----------------------------------- milestone 22 -------------------------
   print("milestone 22")
   
