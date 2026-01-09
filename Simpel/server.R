@@ -273,7 +273,7 @@ function(input, output, session) {
     target_annotation = left_join(target_annotation, accessibility, by =
                                     c('length', 'end'))
     
-  
+  }
   # ----------------------------------- milestone 8 --------------------------
   print("milestone 8: Calculated ViennaRNA accessibility score and filtering")
   
@@ -284,9 +284,6 @@ function(input, output, session) {
   
   # Toxicity score acute neurotox score (desired >70)
   target_annotation$tox_score = calculate_acute_neurotox(target_annotation$oligo_seq)
-  
-  
-  }
   
   
   # ----------------------------------- milestone 9 --------------------------
