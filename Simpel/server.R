@@ -286,6 +286,8 @@ function(input, output, session) {
   target_annotation$tox_score = calculate_acute_neurotox(target_annotation$oligo_seq)
   
   
+  }
+  
   
   # ----------------------------------- milestone 9 --------------------------
   print("milestone 9: Calculated toxicity score and filtering")
@@ -665,7 +667,7 @@ function(input, output, session) {
   View(target_annotation)
   
   summary_server <- target_annotation %>%
-    # head(2) %>% # For quick off-target testing, use head here
+    head(2) %>% # For quick off-target testing, use head here
     mutate(results = map2(name, length, ~ {
       res <- all_offt(.x, 2)
       res$name <- .x
@@ -1403,7 +1405,6 @@ function(input, output, session) {
     closeButton = TRUE
   )
   print("done")
-  }
   }
   )
 }
