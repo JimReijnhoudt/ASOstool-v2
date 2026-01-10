@@ -385,6 +385,7 @@ ui <- fluidPage(
         "Off target results", 
         div("This page displays the off-targets for the selected target mRNA sequence based on the allowed number of mismatches. For the complementary ASO sequence, it shows mismatches, deletions, insertions, protein name and additional information from GGGenome. The protein name is then given to Protein Atlas to retrieve the tissue expression data. This page also calculates the accessibility potential of each off-target.", style="margin-top: 20px; font-size: 18px;"),
         hr(),
+        uiOutput("gggenome_status"),
         h3(textOutput("offtarget_title")),
         textOutput("aso_seq"),
         textOutput("numb_offtargets"),

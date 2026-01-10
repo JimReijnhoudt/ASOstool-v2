@@ -661,24 +661,27 @@ function(input, output, session) {
   # Count the number of pre-mRNA transcripts with a perfect match
   # This part will take some time to run...
   
-  View(target_annotation)
+  summary_server <- tryCatch({
+    target_annotation %>%
+      head(2) %>%
+      mutate(results = map2(name, length, ~ {
+        res <- all_offt(.x, 2)
+        res$name <- .x
+        res$length <- .y
+        res
+      })) %>%
+      pull(results) %>%
+      bind_rows() %>%
+      mutate(distance = mismatches + deletions + insertions,
+             gene_name = str_extract(line, "(?<=\\|)[^;]+")
+      ) %>%
+      distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
+  }, error = function(e) {
+    message("GGGenome is currently unavailable. Off-target features are disabled.", e$message)
+    NULL
+  })
   
-  summary_server <- target_annotation %>%
-    head(2) %>% # For quick off-target testing, use head here
-    mutate(results = map2(name, length, ~ {
-      res <- all_offt(.x, 2)
-      res$name <- .x
-      res$length <- .y
-      res
-    })) %>%
-    pull(results) %>%
-    bind_rows() %>%
-    mutate(distance = mismatches + deletions + insertions,
-            gene_name = str_extract(line, "(?<=\\|)[^;]+")
-    ) %>%
-    distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
-  
-  View(summary_server, title = "Summary Server Debug")
+  if (!is.null(summary_server)) {
   
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
@@ -738,7 +741,7 @@ function(input, output, session) {
         0.3  * n_distance_1 +
         0.02 * n_distance_2
     )
-  
+  }
   # ----------------------------------- milestone 23 -------------------------
   print("milestone 23")
   
@@ -799,6 +802,17 @@ function(input, output, session) {
   current_offtargets <- reactiveVal(NULL)
   cached_results <- reactiveVal(list())
   
+  output$gggenome_status <- renderUI({
+    if (is.null(summary_server)) {
+      div(
+        style = "color:red; font-size:16px; font-weight:bold; margin-bottom:10px;",
+        "GGGenome is currently unavailable. Off-target features are disabled."
+      )
+    } else {
+      NULL
+    }
+  })
+  
   compute_offtarget_accessibility <- function(df) {
     if (input$linux_input != TRUE) return(df)
     
@@ -842,6 +856,8 @@ function(input, output, session) {
   
   observeEvent(input$apply_mismatch, {
     req(current_seq())
+    
+    if (!is.null(summary_server)) {
     
     mm  <- as.numeric(input$user_mismatch)
     seq <- toupper(current_seq())
@@ -905,10 +921,12 @@ function(input, output, session) {
     current_offtargets(subset_df)
     
     output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
+  }
   })
 
   output$offtarget_results <- DT::renderDataTable({
     req(current_offtargets())
+    if (!is.null(summary_server)) {
     
     df <- current_offtargets()
     
@@ -948,6 +966,7 @@ function(input, output, session) {
         order = list(list(distance_col, "asc"))
       )
     )
+    }
   })
   
   output$download_offtarget <- downloadHandler(
@@ -963,6 +982,9 @@ function(input, output, session) {
       )
     },
     content = function(con) {
+      if (is.null(summary_server)) {
+        return(NULL)
+      }
       data_offtarget <- current_offtargets()
       req(data_offtarget)
       write.csv2(data_offtarget, con, row.names = FALSE)
@@ -980,6 +1002,7 @@ function(input, output, session) {
   observeEvent(input$PAtlas_OMIM_search, {
     offtargets <- current_offtargets()
     req(offtargets)
+    if (!is.null(summary_server)) {
     
     offtargets_d2 <- offtargets %>%
       filter(distance < 2)
@@ -1042,6 +1065,7 @@ function(input, output, session) {
     })
     
     current_offtargets(offtargets)
+    }
   })
   
   
@@ -1234,13 +1258,47 @@ function(input, output, session) {
         # Off-target functionality
         req(row_data$name)
         seq <- toupper(row_data$name)
-        
         if (!grepl("^[ACGT]+$", seq)) return()
         
+        # RNaseH functionality
+        selected_target(row_data)
+        oligo_sequence(row_data$oligo_seq)
+        
+        rnaseh_data <- rnaseh_results(
+          selected_row_name = row_data$name,
+          mod_5prime = 0,
+          mod_3prime = 0
+        )
+        
+        rnaseh_stored(rnaseh_data)
+        
+        output$rnaseh_title <- renderText(paste0("RNase H results for: ", row_data$name))
+        
+        output$rnaseh_info <- renderText({
+          HTML(
+            paste0(
+              "length of sequence: ",
+              row_data$length,
+              "<br>",
+              "Oligo sequence (ASO): ",
+              oligo_sequence()
+            )
+          )
+        })
+        
+        output$rnaseh_results <- renderDataTable({
+          datatable(rnaseh_data,
+                    selection = list(mode = "single", selected = 1))
+        })
+        
+        updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
+        
+        # Off-target functionality
         current_seq(seq)
         current_mismatch(2)
         updateSelectInput(session, "user_mismatch", selected = 2)
         
+        if (!is.null(summary_server)) {
         mm <- current_mismatch()
         
         key <- paste0("mm", mm)
@@ -1277,41 +1335,8 @@ function(input, output, session) {
         output$numb_offtargets <- renderText(
           paste0("# off targets: ", nrow(default_subset))
         )
-       
-        # RNaseH functionality
-        selected_target(row_data)
-        oligo_sequence(row_data$oligo_seq)
-        
-        rnaseh_data <- rnaseh_results(
-          selected_row_name = row_data$name,
-          mod_5prime = 0,
-          mod_3prime = 0
-        )
-        
-        rnaseh_stored(rnaseh_data)
-        
-        output$rnaseh_title <- renderText(paste0("RNase H results for: ", row_data$name))
-        
-        output$rnaseh_info <- renderText({
-          HTML(
-            paste0(
-              "length of sequence: ",
-              row_data$length,
-              "<br>",
-              "Oligo sequence (ASO): ",
-              oligo_sequence()
-            )
-          )
-        })
-        
-        output$rnaseh_results <- renderDataTable({
-          datatable(rnaseh_data,
-                    selection = list(mode = "single", selected = 1))
-        })
-        
-        updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
       }
-      
+      }
     })
   }
   
