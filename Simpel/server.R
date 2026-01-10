@@ -919,9 +919,14 @@ function(input, output, session) {
         relocate(offtarget_accessibility, .after = insertions)
     }
     current_offtargets(subset_df)
+    }
     
-    output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
-  }
+    output$numb_offtargets <- renderText({
+      if (is.null(summary_server)) {
+        return(NULL)
+      }
+      paste0("# off targets: ", nrow(subset_df))})
+  
   })
 
   output$offtarget_results <- DT::renderDataTable({
@@ -1325,17 +1330,25 @@ function(input, output, session) {
         # results
         default_subset[order(default_subset$distance), ]
         current_offtargets(default_subset)
-        
-        output$offtarget_title <- renderText(
+        }
+        output$offtarget_title <- renderText({
+          if (is.null(summary_server)) {
+            return(NULL)
+          }
           paste0("Off target results for: ", seq)
-        )
-        output$aso_seq <- renderText(
+        })
+        output$aso_seq <- renderText({
+          if (is.null(summary_server)) {
+            return(NULL)
+          }
           paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq))))
-        )
-        output$numb_offtargets <- renderText(
+        })
+        output$numb_offtargets <- renderText({
+          if (is.null(summary_server)) {
+            return(NULL)
+          }
           paste0("# off targets: ", nrow(default_subset))
-        )
-      }
+        })
       }
     })
   }
