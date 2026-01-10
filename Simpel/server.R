@@ -857,8 +857,6 @@ function(input, output, session) {
   observeEvent(input$apply_mismatch, {
     req(current_seq())
     
-    if (!is.null(summary_server)) {
-    
     mm  <- as.numeric(input$user_mismatch)
     seq <- toupper(current_seq())
     key <- paste0("mm", mm)
@@ -919,7 +917,7 @@ function(input, output, session) {
         relocate(offtarget_accessibility, .after = insertions)
     }
     current_offtargets(subset_df)
-    }
+    
     
     output$numb_offtargets <- renderText({
       if (is.null(summary_server)) {
@@ -931,7 +929,6 @@ function(input, output, session) {
 
   output$offtarget_results <- DT::renderDataTable({
     req(current_offtargets())
-    if (!is.null(summary_server)) {
     
     df <- current_offtargets()
     
@@ -971,7 +968,7 @@ function(input, output, session) {
         order = list(list(distance_col, "asc"))
       )
     )
-    }
+    
   })
   
   output$download_offtarget <- downloadHandler(
@@ -1007,7 +1004,6 @@ function(input, output, session) {
   observeEvent(input$PAtlas_OMIM_search, {
     offtargets <- current_offtargets()
     req(offtargets)
-    if (!is.null(summary_server)) {
     
     offtargets_d2 <- offtargets %>%
       filter(distance < 2)
@@ -1070,7 +1066,7 @@ function(input, output, session) {
     })
     
     current_offtargets(offtargets)
-    }
+    
   })
   
   
@@ -1303,7 +1299,6 @@ function(input, output, session) {
         current_mismatch(2)
         updateSelectInput(session, "user_mismatch", selected = 2)
         
-        if (!is.null(summary_server)) {
         mm <- current_mismatch()
         
         key <- paste0("mm", mm)
@@ -1330,7 +1325,7 @@ function(input, output, session) {
         # results
         default_subset[order(default_subset$distance), ]
         current_offtargets(default_subset)
-        }
+        
         output$offtarget_title <- renderText({
           if (is.null(summary_server)) {
             return(NULL)
