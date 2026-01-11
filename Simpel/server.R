@@ -1246,7 +1246,7 @@ function(input, output, session) {
         session$sendCustomMessage("selectRow", list(table = table_id, row   = cell$row))
       }
       
-      if (!is.null(row) && length(row) > 0) {
+      if (is.null(row) || length(row) == 0) return()
         other_table <- if (table_id == "results1")
           "results2"
         else
@@ -1257,7 +1257,7 @@ function(input, output, session) {
         row_data <- table_data[row, ]
         
         # Off-target functionality
-        req(row_data$name)
+        if (is.null(row_data$name)) return()
         seq <- toupper(row_data$name)
         if (!grepl("^[ACGT]+$", seq)) return()
         
@@ -1344,7 +1344,7 @@ function(input, output, session) {
           }
           paste0("# off targets: ", nrow(default_subset))
         })
-      }
+      
     })
   }
   
