@@ -632,7 +632,7 @@ function(input, output, session) {
   print("milestone 20: Matched ASO sequences to potential off-targets (perfect match, one mismatch")
   
   target_annotation = left_join(target_annotation, uni_tar, by = c('name', 'length'))
-  
+  perform_offt <- TRUE
   prefilter <- nrow(target_annotation)
   target_annotation_filtered <- target_annotation %>%
     filter(
@@ -644,27 +644,28 @@ function(input, output, session) {
   postfilter <- nrow(target_annotation_filtered)
   removed <- prefilter - postfilter
 
-  print(paste0("Filtering Oligo sequences with perfect match > ", input$numeric_input_a, " and 1 mismatch > ", input$numeric_input_b))
+  print(paste0("Filtering Oligo sequences with perfect match < ", input$numeric_input_a, " and 1 mismatch < ", input$numeric_input_b))
   print(paste0("Rows before filtering: ", prefilter))
   print(paste0("Rows after filtering: ", postfilter))
   print(paste0("Filtering removed ", removed, " possible ASOs."))
   if (nrow(target_annotation_filtered) != 0){
     target_annotation <- target_annotation_filtered
   } else{
+    perform_offt <- FALSE
     print("Filtering off-targets resulted in no hits. Continuing with unfiltered off-target data")
     showNotification("Filter 'off-targets' removed all rows; reverting.", type = "warning")
   }
 
   # ----------------------------------- milestone 21 -----------------------
   print("milestone 21: Filtered ASOs with too many off targets")
-  
+  if (isTRUE(perform_offt)) {
   # Count the number of pre-mRNA transcripts with a perfect match
   # This part will take some time to run...
   
   View(target_annotation)
   
   summary_server <- target_annotation %>%
-    head(2) %>% # For quick off-target testing, use head here
+    # head(5) %>% # For quick off-target testing, use head here
     mutate(results = map2(name, length, ~ {
       res <- all_offt(.x, 2)
       res$name <- .x
@@ -673,13 +674,11 @@ function(input, output, session) {
     })) %>%
     pull(results) %>%
     bind_rows() %>%
-    mutate(distance = mismatches + deletions + insertions,
-            gene_name = str_extract(line, "(?<=\\|)[^;]+")
-    ) %>%
-    distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
+    mutate(distance = mismatches + deletions + insertions)
   
   View(summary_server, title = "Summary Server Debug")
   
+  }
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
   
