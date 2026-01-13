@@ -59,7 +59,9 @@ filter_data <- function(data, criterion) {
     snippet_end = df_filtered$snippet_end,
     stringsAsFactors = FALSE
   )
-  
+  df <- df %>%
+    mutate(gene_name = str_extract(line, "(?<=\\|)[^;]+")) %>%
+    distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
   return(df)
 }
 
@@ -116,11 +118,18 @@ all_offt <- function(sequence, mismatches_allowed) {
   # Loop over each URL and retrieve the data from it
   for (i in 1:nrow(urls_df)) {
     url <- urls_df$url[i]
-    condition <- urls_df$condition[i]
-    mismatch_condition <- urls_df$mismatch_condition[i]
+    # condition <- urls_df$condition[i]
+    # mismatch_condition <- urls_df$mismatch_condition[i]
     
     print(paste("Fetching data from:", url))
-    response <- GET(url)
+    response <- RETRY(
+      "GET",
+      url,
+      times = 3,
+      pause_base = 2,
+      pause_cap = 10,
+      terminate_on = c(400, 404)
+    )
     
     if (status_code(response) == 200) {
       df_json <- fromJSON(
@@ -155,9 +164,9 @@ all_offt <- function(sequence, mismatches_allowed) {
   
   
   # Divide the data frame by condition
-  spliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|spliced"), ]
-  prespliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|prespliced"), ]
-  other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
+  # spliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|spliced"), ]
+  # prespliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|prespliced"), ]
+  # other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
   
   return(all_df)
 }
