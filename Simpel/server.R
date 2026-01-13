@@ -664,7 +664,7 @@ function(input, output, session) {
   summary_server <- tryCatch({
     target_annotation %>%
       head(2) %>%
-      mutate(results = map2(namess, length, ~ {
+      mutate(results = map2(name, length, ~ {
         res <- all_offt(.x, 2)
         res$name <- .x
         res$length <- .y
