@@ -72,12 +72,19 @@ RUN mkdir -p /home/rstudio/ASOstool-v2 && \
     chown -R rstudio:rstudio /home/rstudio
 
 RUN mkdir -p /srv/shiny-server/ASOstool-v2 && \
-    chown -R shiny:shiny /srv/shiny-server/
+    chown -R shiny:shiny /srv/shiny-server/ && \
+    chmod -R 775 /srv/shiny-server/ASOstool-v2
 
 RUN mkdir -p /home/rstudio/.ssh \
  && chown -R rstudio:rstudio /home/rstudio/.ssh \
  && chmod 700 /home/rstudio/.ssh
- 
+
+
+# Add run as rstudio for shiny-server
+##############################################
+RUN sed -i 's/^run_as.*/run_as rstudio;/' /etc/shiny-server/shiny-server.conf || \
+    sed -i '1irun_as rstudio;' /etc/shiny-server/shiny-server.conf
+    
 
 # Download and create txdb database
 ##############################################
@@ -95,7 +102,6 @@ RUN R -e "\
 "
 
 
-
 # 5. Expose ports
 ##############################################
 EXPOSE 3838 8787
@@ -104,6 +110,7 @@ EXPOSE 3838 8787
 ##############################################
 ENV USER=rstudio
 ENV PASSWORD=rstudio
+
 
 # 7. Start RStudio Server
 ##############################################
