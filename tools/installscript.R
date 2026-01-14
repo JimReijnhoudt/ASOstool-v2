@@ -14,7 +14,7 @@ install_if_missing <- function(package_name) {
     message(paste(package_name, "is already installed."))
   }
 }
-install.packages(c("future", "future.apply"))
+
 # List of packages to check and install
 packages <- c("shinythemes", "shiny", "GenomicFeatures", "AnnotationDbi",
               "BSgenome.Hsapiens.NCBI.GRCh38", "biomaRt", "Biostrings",
