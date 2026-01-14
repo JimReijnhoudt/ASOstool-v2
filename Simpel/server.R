@@ -341,12 +341,12 @@ function(input, output, session) {
   
   # Define the marts for mmusculus and hsapiens
   martHS = useEnsembl(biomart="ensembl",
-                      # mirror  = "asia", # for when default mirror is not working
+                      mirror  = "asia", # for when default mirror is not working
                       dataset="hsapiens_gene_ensembl"
                       )
 
   martMM = useEnsembl(biomart="ensembl",
-                      # mirror  = "asia", # for when default mirror is not working
+                      mirror  = "asia", # for when default mirror is not working
                       dataset="mmusculus_gene_ensembl"
                       )
   
@@ -676,75 +676,73 @@ function(input, output, session) {
   print("milestone 21: Filtered ASOs with too many off targets")
   
   target_annotation <- target_annotation[order(target_annotation$gene_hits_pm, target_annotation$gene_hits_1mm), ]
-  target_annotation <- head(target_annotation, 500)
+  # target_annotation <- head(target_annotation, 1000)
   
   if (isTRUE(perform_offt)) {
     
     showNotification(
-      sprintf(
-        "Future run started at: %s",
-        format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-      ),
-      type = "default",
-      duration = NULL,
-      closeButton = TRUE
-    )
-    cat(
-      sprintf("Future run started at: %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
-      file = "future_log.txt",
-      append = FALSE
+      sprintf("Future run started at: %s", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+      type = "default", duration = NULL, closeButton = TRUE
     )
     
-    # Count the number of pre-mRNA transcripts with a perfect match
-    # This part will take some time to run...
-    ta <- target_annotation %>% select(name, length) # %>% head(50)
-
-    summary_server <- tryCatch({
-      res_list <- future_lapply(
-        X = seq_len(nrow(ta)),
-        FUN = function(i) {
-          cat("Worker started i=", i, "\n",
-            file = "future_log.txt", append = TRUE)
-          seq_i <- ta$name[[i]]
-          len_i <- ta$length[[i]]
-          df <- all_offt(seq_i, mismatches_allowed = 2)
-          cat("Worker finished i=", i, " nrow=",
-              if (is.data.frame(df)) nrow(df) else NA, "\n",
-              file = "future_log.txt", append = TRUE)
-          # Zorg dat altijd df terugkomt
-          if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) {
-            return(NULL)
-          }
-          df$name <- seq_i
-          df$length <- len_i
-          df
-        },
-        future.seed = TRUE
-      )
-      bind_rows(Filter(Negate(is.null), res_list)) %>%
-        mutate(distance = mismatches + deletions + insertions)
-    }
-    showNotification(
-      sprintf(
-        "Future run ended at: %s",
-        format(Sys.time(), "%Y-%m-%d %H:%M:%S")
-      ),
-      type = "default",
-      duration = NULL,
-      closeButton = TRUE
+    cat(
+      sprintf("Future run started at: %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+      file = "future_log.txt", append = FALSE
     )
-      cat(
-        sprintf("Future run ended at: %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
-        file = "future_log.txt",
-        append = TRUE
-      )
-      
-    # View(summary_server, title = "Summary Server Debug")
-    }, error = function(e) {
-    message("GGGenome is currently unavailable. Off-target features are disabled.", e$message)
-    NULL
-  })
-      
+    
+    ta <- target_annotation %>% 
+      select(name, length) %>% 
+      distinct()
+    
+    summary_server <- tryCatch(
+      {
+        res_list <- future_lapply(
+          X = seq_len(nrow(ta)),
+          FUN = function(i) {
+            
+            cat("Worker started i=", i, "\n", file = "future_log.txt", append = TRUE)
+            
+            seq_i <- ta$name[[i]]
+            len_i <- ta$length[[i]]
+            
+            df <- all_offt(seq_i, mismatches_allowed = 2)
+            
+            cat("Worker finished i=", i, " nrow=",
+                if (is.data.frame(df)) nrow(df) else NA, "\n",
+                file = "future_log.txt", append = TRUE)
+            
+            if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) return(NULL)
+            
+            df$name <- seq_i
+            df$length <- len_i
+            df
+          },
+          future.seed = TRUE
+        )
+        
+        out <- bind_rows(Filter(Negate(is.null), res_list)) %>%
+          mutate(distance = mismatches + deletions + insertions) %>%
+          distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
+        
+        out
+      },
+      error = function(e) {
+        message("GGGenome is currently unavailable. Off-target features are disabled. ", e$message)
+        NULL
+      },
+      finally = {
+        showNotification(
+          sprintf("Future run ended at: %s", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+          type = "default", duration = NULL, closeButton = TRUE
+        )
+        
+        cat(
+          sprintf("Future run ended at: %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+          file = "future_log.txt", append = TRUE
+        )
+      }
+    )
+  }
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
   if (!is.null(summary_server)) {
