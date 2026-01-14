@@ -676,7 +676,7 @@ function(input, output, session) {
   print("milestone 21: Filtered ASOs with too many off targets")
   
   target_annotation <- target_annotation[order(target_annotation$gene_hits_pm, target_annotation$gene_hits_1mm), ]
-  target_annotation <- head(target_annotation, 10)
+  # target_annotation <- head(target_annotation, 1000)
   
   if (isTRUE(perform_offt)) {
     
