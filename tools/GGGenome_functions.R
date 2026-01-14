@@ -1,5 +1,7 @@
 library(tidyverse)
 library(httr)
+library(future)
+library(future.apply)
 # library(readr)
 # library(stringr)
 # library("xlsx")
@@ -9,30 +11,8 @@ generate_urls <- function(sequence, mismatch_conditions, strands) {
   base_url <- "https://gggenome.dbcls.jp/hg38"
   conditions <- c("_RefSeqCurated_prespliced_d3g2202/",
                   "_RefSeqCurated_spliced_d3g2202/")
-  
-  mismatch_col <- character()
-  strand_col <- character()
-  condition_col <- character()
-  url_col <- character()
 
-  for (cond in conditions) {
-    url <- paste0(base_url, cond, mismatch_conditions, strands, sequence, ".json")
-    
-    mismatch_col <- c(mismatch_col, mismatch_conditions)
-    strand_col <- c(strand_col, strands)
-    condition_col <- c(condition_col, cond)
-    url_col <- c(url_col, url)
-  }
-  
-  # save url, mismatch and condition to a dataframe
-  urls_df <- data.frame(
-    mismatch_condition = mismatch_col, 
-    strand = strand_col,
-    condition = condition_col,
-    url = url_col,
-    stringsAsFactors = FALSE
-  )
-  return(urls_df)
+  paste0(base_url, conditions, mismatch_conditions, strands, sequence, ".json")
 }
 
 # Function to filter data based on the number of equal signs
@@ -59,27 +39,11 @@ filter_data <- function(data, criterion) {
     snippet_end = df_filtered$snippet_end,
     stringsAsFactors = FALSE
   )
-  
+  df <- df %>%
+    mutate(gene_name = str_extract(line, "(?<=\\|)[^;]+")) %>%
+    distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
   return(df)
 }
-
-
-# # Function to fetch protein expression data from Protein Atlas
-# fetch_protein_expression <- function(protein_name) {
-#   base_url <- "https://www.proteinatlas.org/api/search_download.php?search="
-#   columns <- "&columns=g,gd,brain_RNA_amygdala,brain_RNA_basal_ganglia,brain_RNA_cerebellum,brain_RNA_cerebral_cortex,brain_RNA_choroid_plexus,brain_RNA_hippocampal_formation,brain_RNA_hypothalamus,brain_RNA_medulla_oblongata,brain_RNA_midbrain,brain_RNA_pons,brain_RNA_spinal_cord,brain_RNA_thalamus&compress=no&format=tsv"
-#   full_url <- paste0(base_url, protein_name, columns)
-#   response <- GET(full_url)
-#   
-#   if (status_code(response) == 200) {
-#     text_data <- content(response, "text", encoding = "UTF-8")
-#     df <- read_tsv(text_data)
-#     return(df)
-#   } else {
-#     print(paste("Failed to fetch data for protein", protein_name))
-#     return(NULL)
-#   }
-# }
 
 
 all_offt <- function(sequence, mismatches_allowed) {
@@ -87,77 +51,51 @@ all_offt <- function(sequence, mismatches_allowed) {
   sequence_length = nchar(sequence)
   mismatch_conditions <- paste0(mismatches_allowed, "/")
   
-  strands <- c("+/")
-  
-  urls_df <- generate_urls(sequence, mismatch_conditions, strands)
+  strands <- "+/"
+  urls_vec <- generate_urls(sequence, mismatch_conditions, strands)
   
   # Initialize an empty data frame that will be filled with summary data
-  summary_df <- data.frame()
-  
-  # Initialize an empty data frame that will be filled with gggenome data
-  all_df <- data.frame(
-    line = character(),
-    match_string = character(),
-    matches = integer(),
-    mismatches = integer(),
-    deletions = integer(), 
-    insertions = integer(),
-    subject_seq = character(),
-    query_seq = character(),
-    start_target = integer(),
-    end_target = integer(),
-    snippet = character(),
-    snippet_start = integer(),
-    snippet_end = integer(),
-    stringsAsFactors = FALSE
-  )
-  
+  out_list <- vector("list", length(urls_vec))
   
   # Loop over each URL and retrieve the data from it
-  for (i in 1:nrow(urls_df)) {
-    url <- urls_df$url[i]
-    condition <- urls_df$condition[i]
-    mismatch_condition <- urls_df$mismatch_condition[i]
-    
-    print(paste("Fetching data from:", url))
-    response <- GET(url)
-    
-    if (status_code(response) == 200) {
-      df_json <- fromJSON(
-        content(response, as = "text", encoding = "UTF-8"),
-        flatten = TRUE)
-      filtered_data_df <- filter_data(df_json, mismatches_allowed)
-      all_df <- bind_rows(all_df, filtered_data_df)
-    } else {
-      print("Failed to fetch data.")
+  for (i in seq_along(urls_vec)) {
+    url <- urls_vec[[i]]
+    # condition <- urls_df$condition[i]
+    # mismatch_condition <- urls_df$mismatch_condition[i]
+
+    response <- tryCatch(
+      RETRY(
+        "GET",
+        url,
+        times = 3,
+        pause_base = 2,
+        pause_cap = 10,
+        terminate_on = c(400, 404),
+        timeout(120)
+     ),
+     error = function(e) NULL
+    )
+      
+    if (is.null(response) || status_code(response) != 200) {
+      out_list[[i]] <- NULL
       next
     }
     
-    if (nrow(all_df) == 0) {
-      all_df <- data.frame(
-        line = NULL,
-        match_string = NULL,
-        matches = NULL,
-        mismatches = NULL,
-        deletions = NULL, 
-        insertions = NULL,
-        subject_seq = NULL,
-        query_seq = NULL,
-        start_target = NULL,
-        end_target = NULL,
-        snippet = NULL,
-        snippet_start = NULL,
-        snippet_end = NULL,
-        stringsAsFactors = FALSE
-      )
+
+    df_json <- fromJSON(
+      content(response, as = "text", encoding = "UTF-8"),
+      flatten = TRUE)
+    
+    
+    filtered_data_df <- filter_data(df_json, mismatches_allowed)
+    
+    
+    if (!is.data.frame(filtered_data_df) || nrow(filtered_data_df) == 0) {
+      out_list[[i]] <- NULL
+    } else {
+      out_list[[i]] <- filtered_data_df
     }
   }
   
-  
-  # Divide the data frame by condition
-  spliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|spliced"), ]
-  prespliced_df <- all_df[str_detect(str_to_lower(all_df$line), "\\|prespliced"), ]
-  other_df <- setdiff(all_df, rbind(spliced_df, prespliced_df))
-  
-  return(all_df)
+  bind_rows(Filter(Negate(is.null), out_list))
 }

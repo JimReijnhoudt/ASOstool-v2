@@ -19,7 +19,8 @@ install_if_missing <- function(package_name) {
 packages <- c("shinythemes", "shiny", "GenomicFeatures", "AnnotationDbi",
               "BSgenome.Hsapiens.NCBI.GRCh38", "biomaRt", "Biostrings",
               "tidyverse", "cluster", "rlang", "dplyr", "DT", "shinyBS",
-              "shinydashboard", "purrr", "txdbmaker", "openxlsx")
+              "shinydashboard", "purrr", "txdbmaker", "openxlsx",
+              "future", "future.apply")
 
 
 # Install BiocManager if not already installed

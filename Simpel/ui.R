@@ -145,7 +145,7 @@ ui <- fluidPage(
           ),
           min = 0,
           max = 50,
-          value = c(19, 20)
+          value = c(18, 20)
         ),
         fluidRow(
           column(
@@ -175,7 +175,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_a", "", value = 5)),
+              column(5, numericInput("numeric_input_a", "", value = 3)),
               checkboxInput("perfect_input", "Enable", value = TRUE)
             ),
             
@@ -203,7 +203,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_b", "", value = 100)),
+              column(5, numericInput("numeric_input_b", "", value = 50)),
               checkboxInput("mismatch_input", "Enable", value = TRUE)
             ),
             
@@ -288,7 +288,7 @@ ui <- fluidPage(
                   choices = c("==", "!=", "<", ">", "<=", ">=")
                 )
               ),
-              column(5, numericInput("numeric_input_e", "", value = 70)),
+              column(5, numericInput("numeric_input_e", "", value = 35)),
               checkboxInput("tox_input", "Enable", value = TRUE)
             ),
             actionButton("run_button", "Run")
