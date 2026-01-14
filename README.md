@@ -134,6 +134,8 @@ This page predicts the optimal binding site for RNase H on the chosen target mRN
 
 This page displays the off-targets for the selected target mRNA sequence based on the allowed number of mismatches. For the complementary ASO sequence, it shows mismatches, deletions, insertions, protein name and additional information from GGGenome. The protein name is then given to Protein Atlas to retrieve the tissue expression data. This page also calculates the accessibility potential of each off-target.   
 
+OMIM information required an API key given by OMIM. To request an API key, go to [OMIM key request page.](https://www.omim.org/api)
+
 ## Setup guide
 ### 👥 Regular user setup (Shiny server only)
 
@@ -145,6 +147,10 @@ Clone this git repository and navigate to the application folder.
 ```
 git clone https://github.com/JimReijnhoudt/ASOstool-v2.git
 cd ASOstool-v2
+```
+Optional: Add OMIM key to OMIM_key file (see request information above):
+```
+echo EXAMPLE_OMIM_KEY > OMIM_key
 ```
 
 #### 2. Build the Docker image 
