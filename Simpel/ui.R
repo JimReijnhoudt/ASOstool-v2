@@ -107,7 +107,7 @@ ui <- fluidPage(
               style = "cursor: pointer;"
             )
           ),
-          value = TRUE
+          value = FALSE
         ),
         checkboxInput(
           "linux_input",
