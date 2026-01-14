@@ -89,7 +89,7 @@ ui <- fluidPage(
               style = "cursor: pointer;"
             )
           ),
-          value = FALSE
+          value = TRUE
         ),
         checkboxInput(
           "Conserved_input",
