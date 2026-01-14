@@ -14,6 +14,8 @@ library(dplyr)
 library(purrr)
 library(shinyBS)
 library(openxlsx)
+library(future)
+library(future.apply)
 
 source("../tools/GGGenome_functions.R")
 source("../tools/RNaseH_script.R")
@@ -21,8 +23,11 @@ source("../tools/Off_target_tissue.R")
 source("../tools/Off_target_OMIM_Api.R")
 source("../tools/Off_target_accessibility.R")
 
+plan(multicore, workers = 4)
+options(future.globals.maxSize = 6 * 1024^3)
+
 function(input, output, session) {
-  
+
   # ----------------------------------- Notifications UI -----------------------
   # Notification stays until clicked away
   showNotification(
@@ -336,10 +341,14 @@ function(input, output, session) {
   
   # Define the marts for mmusculus and hsapiens
   martHS = useEnsembl(biomart="ensembl",
-                      dataset="hsapiens_gene_ensembl")
-  if (input$Conserved_input == TRUE) {
+                      # mirror  = "asia", # for when default mirror is not working
+                      dataset="hsapiens_gene_ensembl"
+                      )
+
   martMM = useEnsembl(biomart="ensembl",
-                      dataset="mmusculus_gene_ensembl")
+                      # mirror  = "asia", # for when default mirror is not working
+                      dataset="mmusculus_gene_ensembl"
+                      )
   
   # Get the orthologous Ensembl gene for the provided human Ensembl ID
   ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
@@ -356,7 +365,6 @@ function(input, output, session) {
           values =
             ortho_ENS$mmusculus_homolog_ensembl_gene,
           mart = martMM)$gene_exon_intron)
-  }
   
   # ----------------------------------- milestone 12 --------------------------
   print("milestone 12: ")
@@ -444,27 +452,27 @@ function(input, output, session) {
   print("milestone 17: Joined PM freq table with target annotation")
   
   # Match RNA Target Regions to the Mouse Ortholog
-  if (input$Conserved_input == TRUE) {
-    # Get length
-    lm = width(RNA_target_mouse)
-    
-    # Make table of mouse information
-    MM_tab = lapply(oligo_lengths, function(i) {
-      tibble(st = 1:(lm - i + 1), w = i)
-    }) %>%
-      bind_rows()
-    
-    # ----------------------------------- milestone 18.1 -----------------------
-    print("milestone 18.1: Match RNA target to mouse ortholog")
-    
-    # Makes DNAStringSet object with mouse info.
-    RNAsitesMM = DNAStringSet(RNA_target_mouse[[1]],
-                              start = MM_tab$st,
-                              width = MM_tab$w)
-    
-    # Adds if conserved in mouse.
-    target_annotation$conserved_in_mmusculus = target_annotation$name %in% RNAsitesMM
-  }
+
+  # Get length
+  lm = width(RNA_target_mouse)
+  
+  # Make table of mouse information
+  MM_tab = lapply(oligo_lengths, function(i) {
+    tibble(st = 1:(lm - i + 1), w = i)
+  }) %>%
+    bind_rows()
+  
+  # ----------------------------------- milestone 18.1 -----------------------
+  print("milestone 18.1: Match RNA target to mouse ortholog")
+  
+  # Makes DNAStringSet object with mouse info.
+  RNAsitesMM = DNAStringSet(RNA_target_mouse[[1]],
+                            start = MM_tab$st,
+                            width = MM_tab$w)
+  
+  # Adds if conserved in mouse.
+  target_annotation$conserved_in_mmusculus = target_annotation$name %in% RNAsitesMM
+  
 
   
   # ----------------------------------- milestone 18.2 -----------------------
@@ -526,7 +534,7 @@ function(input, output, session) {
   ##### FILTERING ######
   
   ta <- target_annotation  # startdataset
-  
+  print(nrow(target_annotation))
   # 1) ASO ending with G filter
   if (isTRUE(input$ASO_ending_G)) {
     ta_prev <- ta
@@ -595,7 +603,7 @@ function(input, output, session) {
   
   target_annotation <- ta
   
-  View(target_annotation)
+  print(nrow(target_annotation))
   
   # ----------------------------------- milestone 19 -----------------------
   print("milestone 19: Calculated secondary and duplex energy of ASO seq")
@@ -608,31 +616,39 @@ function(input, output, session) {
     unique() %>%
     split(.,.$length)
   
-  uni_tar = lapply(uni_tar, function(X){
-    dict0 = PDict(X$name, max.mismatch = 0)
-    dict1 = PDict(X$name, max.mismatch = 1)
-    
-    #perfect match count
-    pm = vwhichPDict(
-      pdict = dict0, subject = HS,
-      max.mismatch = 0, min.mismatch=0)
-    X$gene_hits_pm = tabulate(unlist(pm),nbins=nrow(X))
-    
-    #single mismatch count, without indels
-    mm1 = vwhichPDict(
-      pdict = dict1, subject = HS,
-      max.mismatch = 1, min.mismatch=1)
-    X$gene_hits_1mm = tabulate(unlist(mm1),nbins=nrow
-                               (X))
-    X
-  }) %>%
-    bind_rows()
-
+  uni_tar_list <- future_lapply(
+    X = uni_tar,
+    FUN = function(X, HS) {
+      dict0 <- PDict(X$name, max.mismatch = 0)
+      dict1 <- PDict(X$name, max.mismatch = 1)
+      
+      # perfect match count
+      pm <- vwhichPDict(
+        pdict = dict0, subject = HS,
+        max.mismatch = 0, min.mismatch = 0
+      )
+      X$gene_hits_pm <- tabulate(unlist(pm), nbins = nrow(X))
+      
+      # single mismatch count (no indels)
+      mm1 <- vwhichPDict(
+        pdict = dict1, subject = HS,
+        max.mismatch = 1, min.mismatch = 1
+      )
+      X$gene_hits_1mm <- tabulate(unlist(mm1), nbins = nrow(X))
+      
+      X
+    },
+    HS = HS,
+    future.seed = TRUE
+  )
+  
+  uni_tar <- bind_rows(uni_tar_list)
+  
   # ----------------------------------- milestone 20 -----------------------
   print("milestone 20: Matched ASO sequences to potential off-targets (perfect match, one mismatch")
   
   target_annotation = left_join(target_annotation, uni_tar, by = c('name', 'length'))
-  
+  perform_offt <- TRUE
   prefilter <- nrow(target_annotation)
   target_annotation_filtered <- target_annotation %>%
     filter(
@@ -644,13 +660,14 @@ function(input, output, session) {
   postfilter <- nrow(target_annotation_filtered)
   removed <- prefilter - postfilter
 
-  print(paste0("Filtering Oligo sequences with perfect match > ", input$numeric_input_a, " and 1 mismatch > ", input$numeric_input_b))
+  print(paste0("Filtering Oligo sequences with perfect match < ", input$numeric_input_a, " and 1 mismatch < ", input$numeric_input_b))
   print(paste0("Rows before filtering: ", prefilter))
   print(paste0("Rows after filtering: ", postfilter))
   print(paste0("Filtering removed ", removed, " possible ASOs."))
   if (nrow(target_annotation_filtered) != 0){
     target_annotation <- target_annotation_filtered
   } else{
+    perform_offt <- FALSE
     print("Filtering off-targets resulted in no hits. Continuing with unfiltered off-target data")
     showNotification("Filter 'off-targets' removed all rows; reverting.", type = "warning")
   }
@@ -658,34 +675,79 @@ function(input, output, session) {
   # ----------------------------------- milestone 21 -----------------------
   print("milestone 21: Filtered ASOs with too many off targets")
   
-  # Count the number of pre-mRNA transcripts with a perfect match
-  # This part will take some time to run...
+  target_annotation <- target_annotation[order(target_annotation$gene_hits_pm, target_annotation$gene_hits_1mm), ]
+  target_annotation <- head(target_annotation, 500)
   
-  summary_server <- tryCatch({
-    target_annotation %>%
-      head(2) %>%
-      mutate(results = map2(name, length, ~ {
-        res <- all_offt(.x, 2)
-        res$name <- .x
-        res$length <- .y
-        res
-      })) %>%
-      pull(results) %>%
-      bind_rows() %>%
-      mutate(distance = mismatches + deletions + insertions,
-             gene_name = str_extract(line, "(?<=\\|)[^;]+")
-      ) %>%
-      distinct(gene_name, match_string, query_seq, .keep_all = TRUE)
-  }, error = function(e) {
+  if (isTRUE(perform_offt)) {
+    
+    showNotification(
+      sprintf(
+        "Future run started at: %s",
+        format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      ),
+      type = "default",
+      duration = NULL,
+      closeButton = TRUE
+    )
+    cat(
+      sprintf("Future run started at: %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+      file = "future_log.txt",
+      append = FALSE
+    )
+    
+    # Count the number of pre-mRNA transcripts with a perfect match
+    # This part will take some time to run...
+    ta <- target_annotation %>% select(name, length) # %>% head(50)
+
+    summary_server <- tryCatch({
+      res_list <- future_lapply(
+        X = seq_len(nrow(ta)),
+        FUN = function(i) {
+          cat("Worker started i=", i, "\n",
+            file = "future_log.txt", append = TRUE)
+          seq_i <- ta$name[[i]]
+          len_i <- ta$length[[i]]
+          df <- all_offt(seq_i, mismatches_allowed = 2)
+          cat("Worker finished i=", i, " nrow=",
+              if (is.data.frame(df)) nrow(df) else NA, "\n",
+              file = "future_log.txt", append = TRUE)
+          # Zorg dat altijd df terugkomt
+          if (is.null(df) || !is.data.frame(df) || nrow(df) == 0) {
+            return(NULL)
+          }
+          df$name <- seq_i
+          df$length <- len_i
+          df
+        },
+        future.seed = TRUE
+      )
+      bind_rows(Filter(Negate(is.null), res_list)) %>%
+        mutate(distance = mismatches + deletions + insertions)
+    }
+    showNotification(
+      sprintf(
+        "Future run ended at: %s",
+        format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      ),
+      type = "default",
+      duration = NULL,
+      closeButton = TRUE
+    )
+      cat(
+        sprintf("Future run ended at: %s\n\n", format(Sys.time(), "%Y-%m-%d %H:%M:%S")),
+        file = "future_log.txt",
+        append = TRUE
+      )
+      
+    # View(summary_server, title = "Summary Server Debug")
+    }, error = function(e) {
     message("GGGenome is currently unavailable. Off-target features are disabled.", e$message)
     NULL
   })
-  
-  if (!is.null(summary_server)) {
-  
+      
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
-  
+  if (!is.null(summary_server)) {
   tmp <- tempfile(fileext = ".bgz")
   
   # Download GnomAD lof metrics by gene
@@ -1411,7 +1473,7 @@ function(input, output, session) {
     }
   )
   
-  
+  target_annotation[order(target_annotation$off_target_score), ]
    # Filtered data downloader
       output$Download_filtered <- downloadHandler(
 
