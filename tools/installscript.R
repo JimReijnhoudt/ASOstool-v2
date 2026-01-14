@@ -14,12 +14,13 @@ install_if_missing <- function(package_name) {
     message(paste(package_name, "is already installed."))
   }
 }
-
+install.packages(c("future", "future.apply"))
 # List of packages to check and install
 packages <- c("shinythemes", "shiny", "GenomicFeatures", "AnnotationDbi",
               "BSgenome.Hsapiens.NCBI.GRCh38", "biomaRt", "Biostrings",
               "tidyverse", "cluster", "rlang", "dplyr", "DT", "shinyBS",
-              "shinydashboard", "purrr", "txdbmaker", "openxlsx")
+              "shinydashboard", "purrr", "txdbmaker", "openxlsx",
+              "future", "future.apply")
 
 
 # Install BiocManager if not already installed
