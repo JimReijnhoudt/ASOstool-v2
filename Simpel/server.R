@@ -341,12 +341,14 @@ function(input, output, session) {
   
   # Define the marts for mmusculus and hsapiens
   martHS = useEnsembl(biomart="ensembl",
-                      dataset="hsapiens_gene_ensembl",
-                      mirror  = "asia")
+                      # mirror  = "asia", # for when default mirror is not working
+                      dataset="hsapiens_gene_ensembl"
+                      )
 
   martMM = useEnsembl(biomart="ensembl",
-                      dataset="mmusculus_gene_ensembl",
-                      mirror  = "asia")
+                      # mirror  = "asia", # for when default mirror is not working
+                      dataset="mmusculus_gene_ensembl"
+                      )
   
   # Get the orthologous Ensembl gene for the provided human Ensembl ID
   ortho_ENS = getBM(attributes = "mmusculus_homolog_ensembl_gene",
