@@ -62,7 +62,8 @@ RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org')" 
      ), ask = FALSE)" \
  && R -e "install.packages(c( \
         'shinythemes', 'shiny', 'tidyverse', 'cluster', \
-        'rlang', 'dplyr', 'DT', 'shinyBS', 'shinydashboard', 'openxlsx' \
+        'rlang', 'dplyr', 'DT', 'shinyBS', 'shinydashboard', 'openxlsx', \
+        'future', 'future.apply' \
      ), repos='https://cloud.r-project.org', dependencies=TRUE)"
 
 
