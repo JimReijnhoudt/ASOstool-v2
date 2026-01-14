@@ -675,7 +675,6 @@ function(input, output, session) {
   # ----------------------------------- milestone 21 -----------------------
   print("milestone 21: Filtered ASOs with too many off targets")
   
-  
   target_annotation <- target_annotation[order(target_annotation$gene_hits_pm, target_annotation$gene_hits_1mm), ]
   target_annotation <- head(target_annotation, 500)
   
@@ -700,7 +699,7 @@ function(input, output, session) {
     # This part will take some time to run...
     ta <- target_annotation %>% select(name, length) # %>% head(50)
 
-    summary_server <- {
+    summary_server <- tryCatch({
       res_list <- future_lapply(
         X = seq_len(nrow(ta)),
         FUN = function(i) {
@@ -741,11 +740,14 @@ function(input, output, session) {
       )
       
     # View(summary_server, title = "Summary Server Debug")
-    }
+    }, error = function(e) {
+    message("GGGenome is currently unavailable. Off-target features are disabled.", e$message)
+    NULL
+  })
       
   # ----------------------------------- milestone 22 -----------------------
   print("milestone 22: GGGenome searched for all ASO off-targets")
-  
+  if (!is.null(summary_server)) {
   tmp <- tempfile(fileext = ".bgz")
   
   # Download GnomAD lof metrics by gene
@@ -801,7 +803,7 @@ function(input, output, session) {
         0.3  * n_distance_1 +
         0.02 * n_distance_2
     )
-  
+  }
   # ----------------------------------- milestone 23 -------------------------
   print("milestone 23")
   
@@ -842,25 +844,42 @@ function(input, output, session) {
     req(target_annotation)
     
     df <- target_annotation
-    ws_col <- which(names(df) == "off_target_score") - 1  # DT gebruikt 0-based index
-    
-    datatable(
-      df,
-      rownames = FALSE,
-      selection = "single",
-      options = list(
-        order = list(list(ws_col, "asc"))
+    if ("off_target_score" %in% names(df)) {
+      ws_col <- which(names(df) == "off_target_score") - 1
+      
+      DT::datatable(
+        df,
+        rownames = FALSE,
+        selection = "single",
+        options = list(
+          order = list(list(ws_col, "asc"))
+        )
       )
-    ) %>%
-      formatStyle(names(df), color = "black")
+    } else {
+      DT::datatable(
+        df,
+        rownames = FALSE,
+        selection = "single"
+      )
+    }
   })
-  
   # ----------------------------------- Fayes deel ---------------------------
   
   current_seq <- reactiveVal(NULL)
   current_mismatch <- reactiveVal(2)
   current_offtargets <- reactiveVal(NULL)
   cached_results <- reactiveVal(list())
+  
+  output$gggenome_status <- renderUI({
+    if (is.null(summary_server)) {
+      div(
+        style = "color:red; font-size:16px; font-weight:bold; margin-bottom:10px;",
+        "GGGenome is currently unavailable. Off-target features are disabled."
+      )
+    } else {
+      NULL
+    }
+  })
   
   compute_offtarget_accessibility <- function(df) {
     if (input$linux_input != TRUE) return(df)
@@ -967,7 +986,13 @@ function(input, output, session) {
     }
     current_offtargets(subset_df)
     
-    output$numb_offtargets <- renderText(paste0("# off targets: ", nrow(subset_df)))
+    
+    output$numb_offtargets <- renderText({
+      if (is.null(summary_server)) {
+        return(NULL)
+      }
+      paste0("# off targets: ", nrow(subset_df))})
+  
   })
 
   output$offtarget_results <- DT::renderDataTable({
@@ -1011,6 +1036,7 @@ function(input, output, session) {
         order = list(list(distance_col, "asc"))
       )
     )
+    
   })
   
   output$download_offtarget <- downloadHandler(
@@ -1026,6 +1052,9 @@ function(input, output, session) {
       )
     },
     content = function(con) {
+      if (is.null(summary_server)) {
+        return(NULL)
+      }
       data_offtarget <- current_offtargets()
       req(data_offtarget)
       write.csv2(data_offtarget, con, row.names = FALSE)
@@ -1105,6 +1134,7 @@ function(input, output, session) {
     })
     
     current_offtargets(offtargets)
+    
   })
   
   
@@ -1284,7 +1314,7 @@ function(input, output, session) {
         session$sendCustomMessage("selectRow", list(table = table_id, row   = cell$row))
       }
       
-      if (!is.null(row) && length(row) > 0) {
+      if (is.null(row) || length(row) == 0) return()
         other_table <- if (table_id == "results1")
           "results2"
         else
@@ -1295,52 +1325,10 @@ function(input, output, session) {
         row_data <- table_data[row, ]
         
         # Off-target functionality
-        req(row_data$name)
+        if (is.null(row_data$name)) return()
         seq <- toupper(row_data$name)
-        
         if (!grepl("^[ACGT]+$", seq)) return()
         
-        current_seq(seq)
-        current_mismatch(2)
-        updateSelectInput(session, "user_mismatch", selected = 2)
-        
-        mm <- current_mismatch()
-        
-        key <- paste0("mm", mm)
-        cache <- cached_results()
-        
-        if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
-          default_subset <- cache[[seq]][[key]]
-          
-        } else {
-          default_subset <- off_targets_total %>%
-            filter(toupper(name) == seq, `distance` <= 2)
-        }
-        
-        if (input$linux_input == TRUE) {
-          default_subset <- compute_offtarget_accessibility(default_subset)
-          default_subset <- default_subset %>% 
-            relocate(offtarget_accessibility, .after = insertions)
-        }
-        
-        # Cache
-        cache[[seq]][[key]] <- default_subset
-        cached_results(cache)
-        
-        # results
-        default_subset[order(default_subset$distance), ]
-        current_offtargets(default_subset)
-        
-        output$offtarget_title <- renderText(
-          paste0("Off target results for: ", seq)
-        )
-        output$aso_seq <- renderText(
-          paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq))))
-        )
-        output$numb_offtargets <- renderText(
-          paste0("# off targets: ", nrow(default_subset))
-        )
-       
         # RNaseH functionality
         selected_target(row_data)
         oligo_sequence(row_data$oligo_seq)
@@ -1373,8 +1361,60 @@ function(input, output, session) {
         })
         
         updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
-      }
-      
+        
+        # Off-target functionality
+        if (!is.null(summary_server)) {
+          
+        current_seq(seq)
+        current_mismatch(2)
+        updateSelectInput(session, "user_mismatch", selected = 2)
+        
+        mm <- current_mismatch()
+        
+        key <- paste0("mm", mm)
+        cache <- cached_results()
+        
+        if (!is.null(cache[[seq]]) && !is.null(cache[[seq]][[key]])) {
+          default_subset <- cache[[seq]][[key]]
+          
+        } else {
+          default_subset <- off_targets_total %>%
+            filter(toupper(name) == seq, `distance` <= 2)
+        }
+        
+        if (input$linux_input == TRUE) {
+          default_subset <- compute_offtarget_accessibility(default_subset)
+          default_subset <- default_subset %>% 
+            relocate(offtarget_accessibility, .after = insertions)
+        }
+        
+        # Cache
+        cache[[seq]][[key]] <- default_subset
+        cached_results(cache)
+        
+        # results
+        default_subset[order(default_subset$distance), ]
+        current_offtargets(default_subset)
+        
+        output$offtarget_title <- renderText({
+          if (is.null(summary_server)) {
+            return(NULL)
+          }
+          paste0("Off target results for: ", seq)
+        })
+        output$aso_seq <- renderText({
+          if (is.null(summary_server)) {
+            return(NULL)
+          }
+          paste0("ASO sequence: ", as.character(reverseComplement(DNAString(seq))))
+        })
+        output$numb_offtargets <- renderText({
+          if (is.null(summary_server)) {
+            return(NULL)
+          }
+          paste0("# off targets: ", nrow(default_subset))
+        })
+        }
     })
   }
   
