@@ -782,19 +782,25 @@ function(input, output, session) {
     req(target_annotation)
     
     df <- target_annotation
-    ws_col <- which(names(df) == "off_target_score") - 1  # DT gebruikt 0-based index
-    
-    datatable(
-      df,
-      rownames = FALSE,
-      selection = "single",
-      options = list(
-        order = list(list(ws_col, "asc"))
+    if ("off_target_score" %in% names(df)) {
+      ws_col <- which(names(df) == "off_target_score") - 1
+      
+      DT::datatable(
+        df,
+        rownames = FALSE,
+        selection = "single",
+        options = list(
+          order = list(list(ws_col, "asc"))
+        )
       )
-    ) %>%
-      formatStyle(names(df), color = "black")
+    } else {
+      DT::datatable(
+        df,
+        rownames = FALSE,
+        selection = "single"
+      )
+    }
   })
-  
   # ----------------------------------- Fayes deel ---------------------------
   
   current_seq <- reactiveVal(NULL)
@@ -1295,6 +1301,8 @@ function(input, output, session) {
         updateTabsetPanel(session, "tabs_main", selected = "RNase H cleavage results")
         
         # Off-target functionality
+        if (!is.null(summary_server)) {
+          
         current_seq(seq)
         current_mismatch(2)
         updateSelectInput(session, "user_mismatch", selected = 2)
@@ -1344,7 +1352,7 @@ function(input, output, session) {
           }
           paste0("# off targets: ", nrow(default_subset))
         })
-      
+        }
     })
   }
   
