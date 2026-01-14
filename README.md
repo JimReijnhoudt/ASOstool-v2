@@ -219,6 +219,11 @@ git clone https://github.com/JimReijnhoudt/ASOstool-v2.git
 cd ASOstool-v2
 ```
 
+Optional: Add OMIM key to OMIM_key file (see request information above):
+```
+echo EXAMPLE_OMIM_KEY > OMIM_key
+```
+
 #### 2. Build the Docker image 
 
 ```
