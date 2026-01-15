@@ -62,6 +62,11 @@ parse_PAtlas <- function(ENSMBL_id, target_tissue){
 
   full_url <- paste0(base_url, ENSMBL_id, "&columns=", api_columns, tissue_columns, "&", api_options)
   res <- fromJSON(full_url)
+  
+  if (is.null(res) || length(res) == 0) {
+    return(NULL)
+  }
+  
   res <- res %>%
     mutate(across(4:ncol(.), ~ as.numeric(as.character(.)))) %>%
     rowwise() %>%
