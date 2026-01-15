@@ -56,6 +56,20 @@ ui <- fluidPage(
           value = "ENSG00000100284"
         ),
         checkboxInput(
+          "single_aso_input",
+          label = "Single ASO analysis, enter ASO sequence:",
+          value = FALSE
+        ),
+        conditionalPanel(
+          condition = "input.single_aso_input == true",
+          textInput(
+            "aso_seq_input",
+            label = "",
+            value = "",
+            placeholder = "e.g., GCCTCAGTCTGCTTCGCACC"
+          )
+        ),
+        checkboxInput(
           "polymorphism_input",
           label = tagList(
             "Polymorphism analysis ",

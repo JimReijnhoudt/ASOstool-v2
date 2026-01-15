@@ -23,7 +23,7 @@ source("../tools/Off_target_tissue.R")
 source("../tools/Off_target_OMIM_Api.R")
 source("../tools/Off_target_accessibility.R")
 
-plan(multicore, workers = 4)
+plan(multicore, workers = 12)
 options(future.globals.maxSize = 6 * 1024^3)
 
 function(input, output, session) {
@@ -260,6 +260,14 @@ function(input, output, session) {
   
   target_annotation$name = names(target_regions)
   
+  # ----------------------------------------------
+  
+  if (isTRUE(input$single_aso_input)) {
+    rev_comp <- reverseComplement(DNAString(input$aso_seq_input))
+    rev_comp_str <- as.character(rev_comp)
+    target_annotation <- target_annotation[target_annotation$name == rev_comp_str, ]
+  }
+  
   # ----------------------------------- milestone 6 --------------------------
   print("milestone6: Enumerated all possible ASO target sequences")
   
@@ -308,23 +316,27 @@ function(input, output, session) {
     AAA  = -0.1
   )
   
-  motif_counts <- sapply(names(motif_weights), function(m) {
-    vcountPattern(m, target_annotation$oligo_seq)
-  })
+  seqs <- DNAStringSet(target_annotation$oligo_seq)
   
-  motif_scores <- motif_counts %*% motif_weights
-  
-  motif_scores <- round(motif_scores, 6)
-  
-  motif_result <- data.frame(
-    motif_counts,
-    motif_cor_score = motif_scores[, 1]
+  motif_counts_mat <- sapply(
+    names(motif_weights),
+    function(m) vcountPattern(m, seqs),
+    simplify = "matrix"
   )
   
-  # Add each motif count column to target_annotation
-  target_annotation <- cbind(
+  if (nrow(target_annotation) == 1) {
+    motif_counts_mat <- t(motif_counts_mat)
+  }
+  
+  motif_counts_df <- as.data.frame(motif_counts_mat, stringsAsFactors = FALSE)
+  
+  motif_scores <- as.matrix(motif_counts_mat) %*% as.numeric(motif_weights)
+  motif_scores <- round(motif_scores[, 1], 6)
+  
+  target_annotation <- bind_cols(
     target_annotation,
-    motif_result
+    motif_counts_df,
+    motif_cor_score = motif_scores
   )
   
   
@@ -334,7 +346,7 @@ function(input, output, session) {
   # Bereken aantal "cg"
   target_annotation$CGs = (target_annotation$length -
                    nchar(gsub('CG', '', target_annotation$name))) / 2
-  
+
   # ----------------------------------- milestone 10 --------------------------
   print("milestone 10: Calculated CG motifs")
   
@@ -418,7 +430,7 @@ function(input, output, session) {
   
   # ----------------------------------- milestone 15 -------------------------
   print("milestone 15: Corrected start en end cord based on direction")
-  
+
   # Keep unique names only and extract
   # Information base on chr_start from target.
   if (input$polymorphism_input == TRUE) {
@@ -473,7 +485,6 @@ function(input, output, session) {
   # Adds if conserved in mouse.
   target_annotation$conserved_in_mmusculus = target_annotation$name %in% RNAsitesMM
   
-
   
   # ----------------------------------- milestone 18.2 -----------------------
   print("milestone 18.2: If selected: Matched mouse ortholog to target gene")
@@ -649,34 +660,35 @@ function(input, output, session) {
   
   target_annotation = left_join(target_annotation, uni_tar, by = c('name', 'length'))
   perform_offt <- TRUE
-  prefilter <- nrow(target_annotation)
-  target_annotation_filtered <- target_annotation %>%
-    filter(
-      gene_hits_pm < input$numeric_input_a,
-      gene_hits_1mm < input$numeric_input_b
-    )
-
+  if (isTRUE(input$perfect_input) && isTRUE(input$mismatch_input)) {
+    prefilter <- nrow(target_annotation)
+    target_annotation_filtered <- target_annotation %>%
+      filter(
+        gene_hits_pm <= input$numeric_input_a,
+        gene_hits_1mm <= input$numeric_input_b
+      )
   
-  postfilter <- nrow(target_annotation_filtered)
-  removed <- prefilter - postfilter
-
-  print(paste0("Filtering Oligo sequences with perfect match < ", input$numeric_input_a, " and 1 mismatch < ", input$numeric_input_b))
-  print(paste0("Rows before filtering: ", prefilter))
-  print(paste0("Rows after filtering: ", postfilter))
-  print(paste0("Filtering removed ", removed, " possible ASOs."))
-  if (nrow(target_annotation_filtered) != 0){
-    target_annotation <- target_annotation_filtered
-  } else{
-    perform_offt <- FALSE
-    print("Filtering off-targets resulted in no hits. Continuing with unfiltered off-target data")
-    showNotification("Filter 'off-targets' removed all rows; reverting.", type = "warning")
+    
+    postfilter <- nrow(target_annotation_filtered)
+    removed <- prefilter - postfilter
+  
+    print(paste0("Filtering Oligo sequences with perfect match < ", input$numeric_input_a, " and 1 mismatch < ", input$numeric_input_b))
+    print(paste0("Rows before filtering: ", prefilter))
+    print(paste0("Rows after filtering: ", postfilter))
+    print(paste0("Filtering removed ", removed, " possible ASOs."))
+    if (nrow(target_annotation_filtered) != 0){
+      target_annotation <- target_annotation_filtered
+    } else{
+      perform_offt <- FALSE
+      print("Filtering off-targets resulted in no hits. Continuing with unfiltered off-target data")
+      showNotification("Filter 'off-targets' removed all rows; reverting.", type = "warning")
+    }
   }
-
   # ----------------------------------- milestone 21 -----------------------
   print("milestone 21: Filtered ASOs with too many off targets")
   
   target_annotation <- target_annotation[order(target_annotation$gene_hits_pm, target_annotation$gene_hits_1mm), ]
-  # target_annotation <- head(target_annotation, 1000)
+  target_annotation <- head(target_annotation, 1000)
   
   if (isTRUE(perform_offt)) {
     
@@ -693,7 +705,7 @@ function(input, output, session) {
     ta <- target_annotation %>% 
       select(name, length) %>% 
       distinct()
-    
+    print(nrow(ta))
     summary_server <- tryCatch(
       {
         res_list <- future_lapply(
@@ -804,10 +816,10 @@ function(input, output, session) {
   }
   # ----------------------------------- milestone 23 -------------------------
   print("milestone 23")
-  
+  print(motif_weights)
   
   ## Split correlation motifs from dataframe
-  motif_results_cols <- names(motif_result)
+  motif_results_cols <- names(motif_scores)
   motif_results_cols <- append(motif_results_cols, c('name', 'oligo_seq'))
   motif_cols <- names(motif_weights)
   
@@ -1072,7 +1084,7 @@ function(input, output, session) {
     req(offtargets)
     
     offtargets_d2 <- offtargets %>%
-      filter(distance < 2)
+      filter(distance < 3)
     
     ens_ID <- unique(offtargets_d2$transcript)
     ens_ID <- ens_ID[!is.na(ens_ID) & ens_ID != ""]
@@ -1083,9 +1095,10 @@ function(input, output, session) {
     if (length(new_tx) > 0) {
       PAtlas_result_list <- lapply(new_tx, function(tx) {
         PA_parsed <- parse_PAtlas(tx, input$target_tissue)
+        if (is.null(PA_parsed) || nrow(PA_parsed) == 0) return(NULL)
         mutate(PA_parsed, transcript = tx)
       })
-      PAtlas_results <- bind_rows(PAtlas_result_list)
+      PAtlas_results <- bind_rows(Filter(Negate(is.null), PAtlas_result_list))
     }
     
     PAtlas_updated <- bind_rows(pa_cached, PAtlas_results) %>%
