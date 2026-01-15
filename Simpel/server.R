@@ -339,8 +339,6 @@ function(input, output, session) {
     motif_cor_score = motif_scores
   )
   
-  View(motif_scores)
-  View(target_annotation)
   
   # ----------------------------------- milestone x --------------------------
   print("milestone 9.5: Calculated motif correlation score")
@@ -348,7 +346,7 @@ function(input, output, session) {
   # Bereken aantal "cg"
   target_annotation$CGs = (target_annotation$length -
                    nchar(gsub('CG', '', target_annotation$name))) / 2
-  print(nrow(target_annotation))
+
   # ----------------------------------- milestone 10 --------------------------
   print("milestone 10: Calculated CG motifs")
   
@@ -400,7 +398,7 @@ function(input, output, session) {
 
   ##If Ensembl is offline and still want to test -> load in manual test data.
   #PMs <- read.csv("~/PMs.csv")
-  print(nrow(target_annotation))
+
   
   # ----------------------------------- milestone 13 --------------------------
   print("milestone 13: Get human polymorfisms for RNA target")
@@ -432,7 +430,7 @@ function(input, output, session) {
   
   # ----------------------------------- milestone 15 -------------------------
   print("milestone 15: Corrected start en end cord based on direction")
-  print(nrow(target_annotation))
+
   # Keep unique names only and extract
   # Information base on chr_start from target.
   if (input$polymorphism_input == TRUE) {
@@ -487,7 +485,6 @@ function(input, output, session) {
   # Adds if conserved in mouse.
   target_annotation$conserved_in_mmusculus = target_annotation$name %in% RNAsitesMM
   
-  print(nrow(target_annotation))
   
   # ----------------------------------- milestone 18.2 -----------------------
   print("milestone 18.2: If selected: Matched mouse ortholog to target gene")
