@@ -9,6 +9,9 @@ acc_snippet <- function(
     total_length = 80
 ) {
   
+  # This function extracts the snippet and target sequence information obtained from GGGenome for off-targets to create an 80-nt snippet with the off-target sequence as central as possible. 
+  # The function returns a data frame containing the sequence of the 80-nt snippet, the snippet length (80 by default), the positions of the 80-nt snippet, and the target sequence positions.
+  
   target_length <- end_target - begin_target + 1
   
   flank_total <- total_length - target_length
