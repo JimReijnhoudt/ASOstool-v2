@@ -614,8 +614,7 @@ function(input, output, session) {
   
   target_annotation <- ta
   
-  print(nrow(target_annotation))
-  
+
   # ----------------------------------- milestone 19 -----------------------
   print("milestone 19: Calculated secondary and duplex energy of ASO seq")
   
