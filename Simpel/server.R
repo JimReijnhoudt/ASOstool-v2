@@ -47,7 +47,7 @@ function(input, output, session) {
       closeButton = TRUE
     )
   
-  # ----------------------------------- Functions ----------------------------
+  # ----------------------------------- Functions ------------------------------
   # Make the tox score function
   
   calculate_acute_neurotox <- function(xx) {
@@ -120,10 +120,6 @@ function(input, output, session) {
                        intern = TRUE)
       as.numeric(regmatches(sys_cmd, regexpr("-?\\d+\\.\\d+", sys_cmd)))
     }
-
-
-  
-
     
     RNAselffold_R = function (seqs) {
       output = system('RNAfold --noPS',
@@ -176,7 +172,7 @@ function(input, output, session) {
       }
     )
   }
-  # ----------------------------------- Data setup ---------------------------
+  # ----------------------------------- Data setup -----------------------------
   # Store all human pre-mRNA sequences
   
   txdb_hsa <- tryCatch({
@@ -186,7 +182,7 @@ function(input, output, session) {
     loadDb("../txdb_hsa_biomart.db")
   })
     
-  # ----------------------------------- milestone 1 --------------------------
+  # ----------------------------------- milestone 1 ----------------------------
   print("milestone1: loaded human database object")
   
   # Extract the genes
@@ -202,13 +198,13 @@ function(input, output, session) {
   # Subset genes to keep only those on specified chromosomes
   gdb_hsa <- gdb_hsa[seqnames(gdb_hsa) %in% chr_to_keep]
   
-  # ----------------------------------- milestone 2 --------------------------
+  # ----------------------------------- milestone 2 ----------------------------
   print("milestone2: Subsetted genes from specified chromosomes")
   
   # Get the sequences *
   HS <- getSeq(Hsapiens, gdb_hsa)
     
-  # ----------------------------------- milestone 3 --------------------------
+  # ----------------------------------- milestone 3 ----------------------------
   print("milestone3: Saved human gene sequences")
   # Target collect the pre-mRNA sequence
   
@@ -219,7 +215,7 @@ function(input, output, session) {
   RNA_target = HS[names(HS) == ensembl_ID]
   
   
-  # ----------------------------------- milestone 4 --------------------------
+  # ----------------------------------- milestone 4 ----------------------------
   print("milestone4: Saved input RNA target (ENSEMBL) information: \n")
   print(RNA_target)
   #filters on ensembl ID
@@ -236,7 +232,7 @@ function(input, output, session) {
     strand = ifelse(strand(target_ranges) == "+", 1, -1)
   )
   
-  # ----------------------------------- milestone 5 --------------------------
+  # ----------------------------------- milestone 5 ----------------------------
   print("milestone5: Extracted chromosome coordinates of RNA target")
     
   # Set the width of rna_target as value L
@@ -260,19 +256,17 @@ function(input, output, session) {
   
   target_annotation$name = names(target_regions)
   
-  # ----------------------------------------------
-  
   if (isTRUE(input$single_aso_input)) {
     rev_comp <- reverseComplement(DNAString(input$aso_seq_input))
     rev_comp_str <- as.character(rev_comp)
     target_annotation <- target_annotation[target_annotation$name == rev_comp_str, ]
   }
   
-  # ----------------------------------- milestone 6 --------------------------
+  # ----------------------------------- milestone 6 ----------------------------
   print("milestone6: Enumerated all possible ASO target sequences")
   
 
-  # ----------------------------------- milestone 7 --------------------------
+  # ----------------------------------- milestone 7 ----------------------------
   print("milestone 7: Prefiltered Oligo sequences ending with G")
   
   if (input$linux_input == TRUE) {
@@ -287,7 +281,7 @@ function(input, output, session) {
                                     c('length', 'end'))
     
   }
-  # ----------------------------------- milestone 8 --------------------------
+  # ----------------------------------- milestone 8 ----------------------------
   print("milestone 8: Calculated ViennaRNA accessibility score and filtering")
   
   nucleobase_seq = reverseComplement(target_regions)
@@ -299,7 +293,7 @@ function(input, output, session) {
   target_annotation$tox_score = calculate_acute_neurotox(target_annotation$oligo_seq)
   
   
-  # ----------------------------------- milestone 9 --------------------------
+  # ----------------------------------- milestone 9 ----------------------------
   print("milestone 9: Calculated toxicity score and filtering")
   
   # Define motif weights
@@ -340,14 +334,14 @@ function(input, output, session) {
   )
   
   
-  # ----------------------------------- milestone x --------------------------
+  # ----------------------------------- milestone 9.5 --------------------------
   print("milestone 9.5: Calculated motif correlation score")
   
   # Bereken aantal "cg"
   target_annotation$CGs = (target_annotation$length -
                    nchar(gsub('CG', '', target_annotation$name))) / 2
 
-  # ----------------------------------- milestone 10 --------------------------
+  # ----------------------------------- milestone 10 ---------------------------
   print("milestone 10: Calculated CG motifs")
   
   
@@ -368,7 +362,7 @@ function(input, output, session) {
                     values = ensembl_ID, mart = martHS,
                     bmHeader = FALSE)
   
-  # ----------------------------------- milestone 11 --------------------------
+  # ----------------------------------- milestone 11 ---------------------------
   print("milestone 11: Get mouse ortholog data for genes")
   
   RNA_target_mouse = DNAStringSet(
@@ -378,7 +372,7 @@ function(input, output, session) {
             ortho_ENS$mmusculus_homolog_ensembl_gene,
           mart = martMM)$gene_exon_intron)
   
-  # ----------------------------------- milestone 12 --------------------------
+  # ----------------------------------- milestone 12 ---------------------------
   print("milestone 12: ")
   
   # Obtain all human polymorphisms for the RNA target
@@ -400,7 +394,7 @@ function(input, output, session) {
   #PMs <- read.csv("~/PMs.csv")
 
   
-  # ----------------------------------- milestone 13 --------------------------
+  # ----------------------------------- milestone 13 ---------------------------
   print("milestone 13: Get human polymorfisms for RNA target")
   
   # Count Nucleobase sequence occurrences
@@ -414,7 +408,7 @@ function(input, output, session) {
   # Save it as NoRepeats
   target_annotation$NoRepeats = as.vector(replica[tr])
   
-  # ----------------------------------- milestone 14 --------------------------
+  # ----------------------------------- milestone 14 ---------------------------
   print("milestone 14: Count amount of times ASO sequence is repeated in target gene")
   
   # High-Frequency Polymorphisms analysis
@@ -428,7 +422,7 @@ function(input, output, session) {
     target_annotation$chr_end = chr_coord['end'] - target_annotation$start + 1
   }
   
-  # ----------------------------------- milestone 15 -------------------------
+  # ----------------------------------- milestone 15 ---------------------------
   print("milestone 15: Corrected start en end cord based on direction")
 
   # Keep unique names only and extract
@@ -448,7 +442,7 @@ function(input, output, session) {
         PM_count = n()
       )
     
-    # ----------------------------------- milestone 16 -----------------------
+    # ----------------------------------- milestone 16 -------------------------
     print("milestone 16: Retrieved point mutation frequency count and chance")
     
     # Combine data frames
@@ -460,7 +454,7 @@ function(input, output, session) {
   }
   
   
-  # ----------------------------------- milestone 17 -------------------------
+  # ----------------------------------- milestone 17 ---------------------------
   print("milestone 17: Joined PM freq table with target annotation")
   
   # Match RNA Target Regions to the Mouse Ortholog
@@ -474,7 +468,7 @@ function(input, output, session) {
   }) %>%
     bind_rows()
   
-  # ----------------------------------- milestone 18.1 -----------------------
+  # ----------------------------------- milestone 18.1 -------------------------
   print("milestone 18.1: Match RNA target to mouse ortholog")
   
   # Makes DNAStringSet object with mouse info.
@@ -486,7 +480,7 @@ function(input, output, session) {
   target_annotation$conserved_in_mmusculus = target_annotation$name %in% RNAsitesMM
   
   
-  # ----------------------------------- milestone 18.2 -----------------------
+  # ----------------------------------- milestone 18.2 -------------------------
   print("milestone 18.2: If selected: Matched mouse ortholog to target gene")
   
   if (input$linux_input == TRUE) {
@@ -494,7 +488,7 @@ function(input, output, session) {
     target_annotation$sec_energy = RNAselffold_R(target_annotation$oligo_seq)
     target_annotation$duplex_energy = RNAduplex_R(target_annotation$oligo_seq)
   }
-  # ----------------------------------- milestone 19 -----------------------
+  # ----------------------------------- milestone 19 ---------------------------
   print("milestone 19: Calculated secondary and duplex energy of ASO seq")
   
   unfiltered_total_data <- target_annotation
@@ -540,9 +534,7 @@ function(input, output, session) {
     )
   })
   
-  # ----------------------------------- milestone ---------------------------
-  
-  ##### FILTERING ######
+  # ----------------------------------- filtering ------------------------------
   
   ta <- target_annotation  # startdataset
   print(nrow(target_annotation))
@@ -615,13 +607,13 @@ function(input, output, session) {
   target_annotation <- ta
   
 
-  # ----------------------------------- milestone 19 -----------------------
-  print("milestone 19: Calculated secondary and duplex energy of ASO seq")
+  # ----------------------------------- milestone 20 ---------------------------
+  print("milestone 20: Calculated secondary and duplex energy of ASO seq")
   
   
-  ###################count the number of pre-mRNA transcripts with a perfect match 
+  # count the number of pre-mRNA transcripts with a perfect match 
 
-  #this part will take some time to run...
+  # this part will take some time to run...
   uni_tar = dplyr::select(target_annotation, name, length)%>%
     unique() %>%
     split(.,.$length)
@@ -654,8 +646,8 @@ function(input, output, session) {
   
   uni_tar <- bind_rows(uni_tar_list)
   
-  # ----------------------------------- milestone 20 -----------------------
-  print("milestone 20: Matched ASO sequences to potential off-targets (perfect match, one mismatch")
+  # ----------------------------------- milestone 21 ---------------------------
+  print("milestone 21: Matched ASO sequences to potential off-targets (perfect match, one mismatch")
   
   target_annotation = left_join(target_annotation, uni_tar, by = c('name', 'length'))
   perform_offt <- TRUE
@@ -683,8 +675,8 @@ function(input, output, session) {
       showNotification("Filter 'off-targets' removed all rows; reverting.", type = "warning")
     }
   }
-  # ----------------------------------- milestone 21 -----------------------
-  print("milestone 21: Filtered ASOs with too many off targets")
+  # ----------------------------------- milestone 22 ---------------------------
+  print("milestone 22: Filtered ASOs with too many off targets")
   
   target_annotation <- target_annotation[order(target_annotation$gene_hits_pm, target_annotation$gene_hits_1mm), ]
   target_annotation <- head(target_annotation, 1000)
@@ -755,8 +747,8 @@ function(input, output, session) {
       }
     )
   }
-  # ----------------------------------- milestone 22 -----------------------
-  print("milestone 22: GGGenome searched for all ASO off-targets")
+  # ----------------------------------- milestone 23 ----------------------------
+  print("milestone 23: GGGenome searched for all ASO off-targets")
   if (!is.null(summary_server)) {
   tmp <- tempfile(fileext = ".bgz")
   
@@ -770,13 +762,13 @@ function(input, output, session) {
                         col_select = c(gene, transcript, oe_lof))
   unlink(tmp)
   
-  # ----------------------------------- milestone 23 -----------------------
-  print("milestone 23: Downloaded GnomAD lof metrics by gene to dataframe")
+  # ----------------------------------- milestone 24 ---------------------------
+  print("milestone 24: Downloaded GnomAD lof metrics by gene to dataframe")
   
   off_targets_total = left_join(summary_server, gnomad_df, by = c('gene_name' = 'gene'))
 
-  # ----------------------------------- milestone 22 -------------------------
-  print("milestone 22")
+  # ----------------------------------- milestone 25 ---------------------------
+  print("milestone 25:")
   
   dist_counts <- off_targets_total %>%
     group_by(name, distance) %>%
@@ -803,8 +795,8 @@ function(input, output, session) {
   target_annotation <- target_annotation %>%
     left_join(off_summary, by = c("name" = "name"))
   
-  # ----------------------------------- milestone 22 -------------------------
-  print("milestone 22")
+  # ----------------------------------- milestone 26 ---------------------------
+  print("milestone 26:")
   
   target_annotation <- target_annotation %>%
     mutate(
@@ -814,8 +806,9 @@ function(input, output, session) {
         0.02 * n_distance_2
     )
   }
-  # ----------------------------------- milestone 23 -------------------------
-  print("milestone 23")
+  
+  # ----------------------------------- milestone 27 ---------------------------
+  print("milestone 27")
   print(motif_weights)
   
   ## Split correlation motifs from dataframe
@@ -831,8 +824,9 @@ function(input, output, session) {
   # Target annotation with just the correlation score
   target_annotation <- target_annotation %>%
     select(-all_of(motif_cols))
-  # ----------------------------------- milestone 21 -------------------------
-  print("milestone21")
+  
+  # ----------------------------------- milestone 28 ---------------------------
+  print("milestone28")
   
   # Check if the filtered result is empty
   if (nrow(target_annotation) == 0) {
@@ -873,7 +867,7 @@ function(input, output, session) {
       )
     }
   })
-  # ----------------------------------- Fayes deel ---------------------------
+  # ----------------------------- Offtarget analysis ---------------------------
   
   # Off-target information is stored in reactiveVals, so dependencies can be easily updated.
   current_seq <- reactiveVal(NULL)
@@ -1083,7 +1077,7 @@ function(input, output, session) {
     }
   )
   
-  # ----------------------------------- Proteinatlas/OMIM off-target search---
+  # ---------------- Proteinatlas/OMIM off-target search -----------------------
   # Function for parsing OMIM and Protein atlast data
   
   PAtlas_cache <- reactiveVal(tibble())
@@ -1161,7 +1155,7 @@ function(input, output, session) {
   })
   
   
-  # ----------------------------------- Harrys deel --------------------------
+  # -------------------------------- RNase H analysis --------------------------
   
   # String reverse function
   reverse_string <- function(x) {
@@ -1179,6 +1173,7 @@ function(input, output, session) {
     if (is.null(row_data))
       return()
     
+    # The used data collected from the selected row.
     rnaseh_data <- rnaseh_results(
       selected_row_name = row_data$name,
       oligo_seq = row_data$oligo_seq,
@@ -1186,12 +1181,15 @@ function(input, output, session) {
       mod_3prime = input$mod_3prime
     )
     
+    # Stores the data is usable variable. 
     rnaseh_stored(rnaseh_data)
     
+    # Renders table output for rnaseh_results. 
     output$rnaseh_results <- renderDataTable({
       datatable(rnaseh_data, selection = list(mode = 'single', selected = 1))
     })
     
+    # Renders cleavage_visual div on rnaseh page.
     output$cleavage_visual <- renderUI(div())
   })
   
@@ -1209,42 +1207,50 @@ function(input, output, session) {
     if (is.null(rnaseh_data))
       return()
     
+    # Selected row.
     selected_row <- rnaseh_data[row_number, ]
     
-    # Oligo sequence
+    # Oligo sequence.
     oligo_seq <- row_data$oligo_seq
     
+    # Modification inputs to oligo sequence.
     mod5 <- input$mod_5prime
     mod3 <- input$mod_3prime
     
     oligo_len <- nchar(oligo_seq)
     
+    # Modified regions of oligo sequence. 
     mod5_region <- substr(oligo_seq, 1, mod5)
     mod3_region <- substr(oligo_seq, oligo_len - mod3 + 1, oligo_len)
     
+    # Unmodified mid-section of oligo sequence. 
     mid_region <- substr(oligo_seq, mod5 + 1, oligo_len - mod3)
     
-    # RNA sequence
+    # Target mRNA sequence.
     position_string <- str_split_1(selected_row$position, " - ")
     start_pos <- as.numeric(position_string[1])
     
+    # Getting both orientations of the target mRNA sequence. 
     target_seq_fw <- row_data$name
     target_seq_rv <- reverse_string(target_seq_fw)
     
     rna_len <- nchar(target_seq_fw)
     
+    # Cleavage position/coordinates for the visualization. 
     cleavage_start_fw <- start_pos
     cleavage_pos_fw <- cleavage_start_fw + 6
     cleavage_pos_rv <- rna_len - cleavage_pos_fw
     cleavage_site_up <- cleavage_pos_rv - 1
     cleavage_site_down <- cleavage_pos_rv + 7
     
+    # Creating all the substrings of the cleavage site for the visualization. 
     upstream <- substr(target_seq_rv, 1, cleavage_site_up - 1)
     site_start <- substr(target_seq_rv, cleavage_site_up, cleavage_pos_rv - 1)
     cut_site <- substr(target_seq_rv, cleavage_pos_rv, cleavage_pos_rv)
     site_down <- substr(target_seq_rv, cleavage_pos_rv + 1, cleavage_site_down)
     downstream <- substr(target_seq_rv, cleavage_site_down + 1, rna_len)
     
+    # The oligo visualization with possible modifications in HTML-format that will be used on the RNase H page.
     oligo_visual_fw <- paste0(
       "<b style='color:darkorange;'>5'</b> ",
       "<span style='font-weight:bold; color:#90D5FF;'>",
@@ -1257,6 +1263,7 @@ function(input, output, session) {
       " <b style='color:darkorange;'>3'</b>"
     )
     
+    # The target mRNA visualization with cleavage site in HTML-format that will be used on the RNase H page.
     rna_visual_rv <- paste0(
       "<b style='color:darkorange;'>3'</b> ",
       upstream,
@@ -1270,6 +1277,7 @@ function(input, output, session) {
       " <b style='color:darkorange;'>5'</b>"
     )
     
+    # The structured div element with both oligo and target mRNA sequences in HTML-format being rendered. 
     output$cleavage_visual <- renderUI({
       HTML(
         paste0(
@@ -1286,7 +1294,7 @@ function(input, output, session) {
     })
   })
   
-  # Download handler.
+  # Download handler for RNase H results. 
   output$download_rnaseh <- downloadHandler(
     filename = function() {
       row_data <- selected_target()
@@ -1311,7 +1319,7 @@ function(input, output, session) {
     }
   )
   
-  # ----------------------------------- Table handlers -----------------------
+  # ----------------------------- Table handlers -------------------------------
   
   # Function for table handler call
   handle_table_events <- function(input,
@@ -1483,8 +1491,8 @@ function(input, output, session) {
     cached_results = cached_results
   )
   
-  # ----------------------------------- End of script ------------------------
-  #unfiltered data downloader
+  # ----------------------------- End of script --------------------------------
+  # unfiltered data downloader
   output$Download_unfiltered <- downloadHandler(
     
     filename = function() {

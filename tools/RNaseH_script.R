@@ -4,20 +4,27 @@ library(glue)
 library(dplyr)
 
 rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime){
+  # This function calculates all possible windows on the target mRNA sequence and scores them. 
+  # It takes in to account which end modifications have been made to the oligo sequence and removes 
+  # any windows that don't meet the overlap criteria.
+  # It also warns the user if their are no longer any windows left over because of end modifications. 
+  
   # The standard score matrix for the nucleotide positions for cleavage. 
   nucleotide_model <- read_excel("../Files/nucleotide_model.xlsx")
   
-  # Target sequence. 
+  # Target sequence data, window size and sequence length. 
   rna_seq = selected_row_name
   window_size = 9
   rna_len = nchar(rna_seq)
   
   # Check if windows are possible by size.
+  # Sets all sequences in the right reading orientation. 
   tmp <- mod_5prime
   mod_5prime <- mod_3prime
   mod_3prime <- tmp
   
-  # Overlap on the 5' end of the rna sequence. 
+  # Set the allowed overlap values of the 5' and 3' ends of the target mRNA sequence. 
+  # The overlap corresponds to the end modification made to the oligo sequence. 
   overlap_5prime <- 4
   overlap_3prime <- 2
   start_min  <- max(1, (mod_5prime + 1) - overlap_5prime)
@@ -25,6 +32,7 @@ rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime)
     (rna_len - mod_3prime - window_size + 1) + overlap_3prime
   )
   
+  # Warning: if too many end modifications have been made to oligo sequence and no more usable windows are present. 
   if (start_min > start_max) {
     showNotification(
       "Modifications to 5' and 3' ends overlap to much for sequence length.",
@@ -34,7 +42,7 @@ rnaseh_results <- function(selected_row_name, oligo_seq, mod_5prime, mod_3prime)
     return(NULL)
   }
   
-  # All windows of rna sequence.
+  # All possible windows of the target mRNA sequence.
   starts_pos <- start_min:start_max
   windows <- substring(rna_seq, starts_pos, starts_pos + (window_size - 1))
   
