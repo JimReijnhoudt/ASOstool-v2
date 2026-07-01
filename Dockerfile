@@ -52,7 +52,7 @@ RUN wget https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_7_x/ViennaRNA-2.
 # Install R packages (CRAN + Bioconductor)
 ##############################################
 RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org')" \
- && R -e "BiocManager::install(c( \
+ && R -e "options(timeout=3600); BiocManager::install(c( \
         'GenomicFeatures', \
         'AnnotationDbi', \
         'BSgenome.Hsapiens.NCBI.GRCh38', \
